@@ -374,6 +374,29 @@
       td,th{color:#111827;border-color:#ddd}
     }
 
+  
+
+    /* ===== 기능 강화 UI ===== */
+    .toolbar{display:flex;justify-content:flex-end;gap:10px;margin:0 0 12px;flex-wrap:wrap}
+    .mini-btn{min-height:34px;padding:0 12px;font-size:12px;border-radius:999px}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+    .section-head h2{margin:0;font-size:24px;color:#fff;display:flex;gap:10px;align-items:center}
+    .section-head p{margin:6px 0 0;color:#b8b8b8;font-size:14px;line-height:1.5}
+    .upload-body{display:block}.collapsed .upload-body{display:none}
+    .upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.upload-card{border:1px solid rgba(190,169,139,.24);border-radius:22px;padding:18px;background:rgba(0,0,0,.15)}
+    .upload-title{font-weight:900;color:#eadcc5;margin-bottom:10px}.upload-desc{color:#c7bca8;font-size:14px;line-height:1.55;margin-bottom:14px;min-height:68px}
+    .upload-drop{height:62px;border:1px dashed rgba(190,169,139,.36);border-radius:16px;background:rgba(255,255,255,.055);display:flex;align-items:center;gap:14px;padding:0 16px;cursor:pointer;transition:.18s ease;color:#ece7df;overflow:hidden}
+    .upload-drop:hover{background:rgba(190,169,139,.16);border-color:rgba(190,169,139,.7);transform:translateY(-2px)}
+    .upload-drop input{display:none!important}.upload-btn{height:40px;padding:0 18px;border-radius:12px;background:linear-gradient(180deg,var(--gold2),var(--gold3));color:#fff;font-weight:900;display:inline-flex;align-items:center;white-space:nowrap;box-shadow:0 10px 24px rgba(0,0,0,.22)}
+    .file-name{font-size:13px;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.control-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:14px;align-items:end;margin-top:16px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.kpi{border:1px solid rgba(190,169,139,.25);border-radius:22px;padding:18px;background:rgba(255,255,255,.07);box-shadow:0 16px 42px rgba(0,0,0,.22)}
+    .kpi small{display:block;color:#b8b8b8;margin-bottom:10px}.kpi strong{font-size:30px;color:#fff;letter-spacing:-.8px}.kpi span{display:block;margin-top:8px;color:#d8c7ac;font-size:12px;font-weight:800}
+    .chart-wrap{display:flex;flex-direction:column;gap:12px}.bar-row{display:grid;grid-template-columns:130px 1fr 70px;gap:12px;align-items:center}.bar-label{font-size:13px;color:#eadcc5;font-weight:800}.bar-track{height:16px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}.bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold3),var(--gold2));min-width:3px}.bar-value{font-size:13px;text-align:right;color:#fff;font-weight:900}
+    .table-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.table-card.fullscreen-mode{position:fixed!important;inset:16px!important;z-index:100!important;margin:0!important;overflow:auto!important;background:#111!important}.table-card.fullscreen-mode #summaryOutput,.table-card.fullscreen-mode #output{max-height:calc(100vh - 130px);overflow:auto}
+    #loadingOverlay{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.68);backdrop-filter:blur(10px)}#loadingOverlay.show{display:flex}.loader-card{border:1px solid rgba(190,169,139,.38);border-radius:26px;background:linear-gradient(180deg,#222,#111);padding:26px 30px;text-align:center;box-shadow:0 28px 80px rgba(0,0,0,.55)}.spinner{width:44px;height:44px;border:4px solid rgba(190,169,139,.22);border-top-color:var(--gold2);border-radius:50%;margin:0 auto 14px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    body.light-mode{--bg:#f7f2ea;--bg2:#fff;--text:#1f2937;--muted:#6b7280;--card:rgba(255,255,255,.72);--card2:rgba(255,255,255,.9);background:linear-gradient(135deg,#f7f2ea,#fff 45%,#efe5d6);color:#1f2937}body.light-mode h1,body.light-mode .section-head h2,body.light-mode .kpi strong{color:#111827}body.light-mode th{color:#5b4a35}body.light-mode td{color:#1f2937}body.light-mode .upload-card,body.light-mode .upload-drop,#body.light-mode .bar-track{background:rgba(255,255,255,.62)}
+    @media(max-width:980px){.upload-grid,.kpi-grid{grid-template-columns:1fr}.control-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:94px 1fr 54px}.section-head{flex-direction:column}.table-actions{justify-content:flex-start}}
+
   </style>
 </head>
 <body>
@@ -388,66 +411,121 @@
   </header>
 
   <div class="wrap">
-    <div class="card">
-      <div class="grid">
-        <div>
-          <label>접수메모 키워드(선택)</label>
-          <label>PT만, 충격파, 주사경과, 독감, 드레싱 등</label>
-          <input type="text" id="keywordInput" placeholder="예: PT만" />
-        </div>
-        <div>
-          <label>외래진료실➡️외래환자➡️기간설정➡️검색➡️Excel내려받기</label>
-          <label>※ CSV / XLSX / XLS 모두 지원 (CSV는 UTF-8·EUC-KR 자동 인식)</label>
-          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
-        </div>
-        <div class="btnrow">
-          <button id="pickBtn" onclick="document.getElementById('fileInput').click()">파일 선택</button>
-          <button id="oneshotBtn" class="secondary" disabled>주사 1회자 보기</button>
-          <button id="oneshotDlBtn" class="secondary" disabled>1회자 다운로드</button>
-          <button id="printBtn" class="secondary" onclick="window.print()">인쇄</button>
-        </div>
-      </div>
-
-      <div style="margin-top:10px; display:grid; gap:10px; grid-template-columns: 1fr 1fr auto;">
-        <div style="grid-column: 1 / span 2;">
-          <label>통계➡️인원통계➡️내원경로통계➡️집계➡️파일로 내려받기</label>
-          <label>※ 내원경로 파일 업로드 </label>
-          <input type="file" id="routeFileInput" accept=".xls,.xlsx,.csv" />
-        </div>
-        <div class="btnrow" style="justify-content:flex-end">
-          <button id="routeStatusBtn" class="secondary" disabled>내원경로: 미업로드</button>
-        </div>
-      </div>
-
-      <div style="margin-top:10px; display:grid; gap:10px; grid-template-columns: 1fr 1fr auto; align-items:end;">
-        <div>
-          <label>통계 기간 시작일(선택)</label>
-          <input type="date" id="startDateInput" />
-        </div>
-        <div>
-          <label>통계 기간 종료일(선택)</label>
-          <input type="date" id="endDateInput" />
-        </div>
-        <div class="btnrow" style="justify-content:flex-end">
-          <button id="applyDateBtn" class="secondary" type="button">기간 적용</button>
-          <button id="resetDateBtn" class="secondary" type="button">전체 기간</button>
-        </div>
-      </div>
-      <p id="dateRangeStatus" style="color:var(--muted);font-size:12px;margin:8px 0 0">통계 기간: 전체</p>
-      <p style="color:var(--muted);font-size:12px;margin:8px 0 0">⚠️ 모든 데이터는 브라우저 내에서만 처리됩니다.</p>
+    <div class="toolbar no-print">
+      <button class="secondary mini-btn" id="themeToggleBtn" type="button">🌙 다크/라이트</button>
+      <button class="secondary mini-btn" onclick="window.print()" type="button">🖨️ 인쇄</button>
     </div>
 
-    <div class="card table-card">
-      <h3 class="card-title">요약 통계 (전체 / 각 진료실)</h3>
+    <div class="card" id="uploadPanel">
+      <div class="section-head">
+        <div>
+          <h2>📁 파일 업로드 및 조회 조건</h2>
+          <p>비트 외래환자 파일과 내원경로 파일을 업로드한 뒤 조회 기간을 선택하고 통계를 계산하세요.</p>
+        </div>
+        <button class="secondary mini-btn" id="toggleUploadBtn" type="button">접기 ▲</button>
+      </div>
+
+      <div class="upload-body">
+        <div class="upload-grid">
+          <div class="upload-card">
+            <div class="upload-title">접수메모 키워드</div>
+            <div class="upload-desc">PT만, 충격파, 주사경과, 독감, 드레싱 등 특정 메모를 함께 집계합니다.</div>
+            <input type="text" id="keywordInput" placeholder="예: PT만" />
+          </div>
+
+          <div class="upload-card">
+            <div class="upload-title">외래환자 파일</div>
+            <div class="upload-desc">외래진료실 → 외래환자 → 기간설정 → 검색 → Excel 내려받기<br>CSV / XLSX / XLS 지원</div>
+            <label class="upload-drop" for="fileInput">
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+              <span class="upload-btn">파일 선택</span>
+              <span class="file-name" id="fileInputName">선택된 파일 없음</span>
+            </label>
+          </div>
+
+          <div class="upload-card">
+            <div class="upload-title">내원경로 파일</div>
+            <div class="upload-desc">통계 → 인원통계 → 내원경로통계 → 집계 → 파일로 내려받기<br>1회자 휴대폰 매칭용</div>
+            <label class="upload-drop" for="routeFileInput">
+              <input type="file" id="routeFileInput" accept=".xls,.xlsx,.csv" />
+              <span class="upload-btn">파일 선택</span>
+              <span class="file-name" id="routeFileInputName">선택된 파일 없음</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="control-grid">
+          <div>
+            <label>통계 기간 시작일</label>
+            <input type="date" id="startDateInput" />
+          </div>
+          <div>
+            <label>통계 기간 종료일</label>
+            <input type="date" id="endDateInput" />
+          </div>
+          <div>
+            <label>내원경로 상태</label>
+            <button id="routeStatusBtn" class="secondary" disabled style="width:100%">내원경로: 미업로드</button>
+          </div>
+          <div class="btnrow">
+            <button id="applyDateBtn" class="secondary" type="button">기간 적용</button>
+            <button id="resetDateBtn" class="secondary" type="button">전체 기간</button>
+            <button id="oneshotBtn" class="secondary" disabled>주사 1회자 보기</button>
+            <button id="oneshotDlBtn" class="secondary" disabled>1회자 다운로드</button>
+          </div>
+        </div>
+        <p id="dateRangeStatus" style="color:var(--muted);font-size:12px;margin:10px 0 0">통계 기간: 전체</p>
+        <p style="color:var(--muted);font-size:12px;margin:8px 0 0">⚠️ 모든 데이터는 브라우저 내에서만 처리됩니다.</p>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpiSection" style="display:none;margin-top:18px">
+      <div class="kpi"><small>전체 초진</small><strong id="kpiFirst">-</strong><span>신환 + 90일초진</span></div>
+      <div class="kpi"><small>초진 주사처방률</small><strong id="kpiInjRate">-</strong><span>초진일 기준</span></div>
+      <div class="kpi"><small>초진 평균 내원</small><strong id="kpiVisitAvg">-</strong><span>평균 내원횟수</span></div>
+      <div class="kpi"><small>초진 재내원율</small><strong id="kpiRevisit">-</strong><span>2회 이상 내원</span></div>
+    </div>
+
+    <div class="card" id="chartCard" style="display:none">
+      <div class="section-head">
+        <div>
+          <h2>📈 진료실별 막대그래프</h2>
+          <p>진료실별 초진환자수를 기준으로 자동 생성됩니다.</p>
+        </div>
+        <div class="table-actions no-print">
+          <button class="secondary mini-btn" onclick="copyElementText('chartBars')" type="button">복사</button>
+        </div>
+      </div>
+      <div class="chart-wrap" id="chartBars"></div>
+    </div>
+
+    <div class="card table-card" id="summaryCard">
+      <div class="section-head">
+        <h2>📊 요약 통계</h2>
+        <div class="table-actions no-print">
+          <button class="secondary mini-btn" onclick="copyTable('summaryOutput')" type="button">표 복사</button>
+          <button class="secondary mini-btn" onclick="downloadTableXlsx('summaryOutput','비트_요약통계.xlsx')" type="button">엑셀 다운로드</button>
+          <button class="secondary mini-btn" onclick="toggleTableFullscreen('summaryCard')" type="button">전체화면</button>
+        </div>
+      </div>
       <div id="summaryOutput"></div>
     </div>
 
-    <div class="card table-card">
-      <h3 class="card-title">연령대별 통계 (진료실별)</h3>
+    <div class="card table-card" id="ageCard">
+      <div class="section-head">
+        <h2>📋 연령대별 통계</h2>
+        <div class="table-actions no-print">
+          <button class="secondary mini-btn" onclick="copyTable('output')" type="button">표 복사</button>
+          <button class="secondary mini-btn" onclick="downloadTableXlsx('output','비트_연령대별통계.xlsx')" type="button">엑셀 다운로드</button>
+          <button class="secondary mini-btn" onclick="toggleTableFullscreen('ageCard')" type="button">전체화면</button>
+        </div>
+      </div>
       <div id="output"></div>
       <div id="warning" class="warn"></div>
     </div>
   </div>
+
+  <div id="loadingOverlay"><div class="loader-card"><div class="spinner"></div><strong>통계 계산 중입니다</strong><p style="color:#b8b8b8;margin:8px 0 0;font-size:13px">파일을 읽고 주요 지표를 정리하고 있습니다.</p></div></div>
 
   <div id="oneshotModal" class="modal-backdrop" role="dialog" aria-modal="true">
     <div class="modal">
@@ -972,6 +1050,7 @@
 
     renderSummaryTable(result);
     renderAgeTable(result);
+    renderKPIAndChart(result);
 
     const ones = extractInjOnceList(workingDf, col);
     const onesNew = extractNewpatientInjOnceList(workingDf, col);
@@ -1158,11 +1237,83 @@
     });
   }
 
+
+  /* ================= 기능 강화 UI ================= */
+  function setLoading(on){
+    const el=document.getElementById('loadingOverlay');
+    if(el) el.classList.toggle('show', !!on);
+  }
+  function updateFileName(inputId, labelId){
+    const input=document.getElementById(inputId), label=document.getElementById(labelId);
+    if(!input||!label) return;
+    const files=[...(input.files||[])];
+    label.textContent = files.length ? (files.length===1 ? files[0].name : `${files.length}개 파일 선택됨`) : '선택된 파일 없음';
+  }
+  function getPlainPercent(v){
+    const n=parseFloat(String(v||'').replace('%',''));
+    return isNaN(n)?0:n;
+  }
+  function renderKPIAndChart(result){
+    const overall=(result||[]).find(r=>r['구분']==='전체' && r['연령대']==='전체');
+    const kpi=document.getElementById('kpiSection');
+    if(overall && kpi){
+      kpi.style.display='grid';
+      document.getElementById('kpiFirst').textContent=formatCell(overall['초진']);
+      document.getElementById('kpiInjRate').textContent=formatCell(overall['초진 주사처방률']);
+      document.getElementById('kpiVisitAvg').textContent=formatCell(overall['초진 평균 내원횟수']);
+      document.getElementById('kpiRevisit').textContent=formatCell(overall['초진 재내원율']);
+    }
+    const rows=(result||[]).filter(r=>r['연령대']==='전체' && r['구분']!=='전체' && r['구분']!=='진료실 평균(균등)');
+    const chart=document.getElementById('chartCard'), box=document.getElementById('chartBars');
+    if(!chart||!box) return;
+    if(!rows.length){chart.style.display='none'; return;}
+    const max=Math.max(...rows.map(r=>Number(r['초진'])||0),1);
+    box.innerHTML=rows.map(r=>{
+      const val=Number(r['초진'])||0;
+      const pct=Math.max(3, Math.round(val/max*100));
+      return `<div class="bar-row"><div class="bar-label">${r['구분']}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><div class="bar-value">${formatCell(val)}</div></div>`;
+    }).join('');
+    chart.style.display='block';
+  }
+  function toggleTableFullscreen(id){
+    const el=document.getElementById(id); if(!el) return;
+    el.classList.toggle('fullscreen-mode');
+  }
+  function copyElementText(id){
+    const el=document.getElementById(id); if(!el) return;
+    navigator.clipboard?.writeText(el.innerText||'');
+    alert('복사되었습니다.');
+  }
+  function copyTable(id){
+    const el=document.getElementById(id); if(!el) return;
+    const rows=[...el.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>td.innerText.trim()).join('\t')).join('\n');
+    if(!rows){ alert('복사할 표가 없습니다.'); return; }
+    navigator.clipboard?.writeText(rows);
+    alert('표가 복사되었습니다. 엑셀에 바로 붙여넣기 할 수 있습니다.');
+  }
+  function downloadTableXlsx(id, filename){
+    const el=document.getElementById(id); const table=el?.querySelector('table');
+    if(!table){ alert('다운로드할 표가 없습니다.'); return; }
+    const wb=XLSX.utils.table_to_book(table,{sheet:'통계'});
+    XLSX.writeFile(wb, filename || '통계.xlsx');
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('toggleUploadBtn')?.addEventListener('click',()=>{
+      const panel=document.getElementById('uploadPanel');
+      panel.classList.toggle('collapsed');
+      document.getElementById('toggleUploadBtn').textContent = panel.classList.contains('collapsed') ? '펼치기 ▼' : '접기 ▲';
+    });
+    document.getElementById('themeToggleBtn')?.addEventListener('click',()=>document.body.classList.toggle('light-mode'));
+    document.getElementById('fileInput')?.addEventListener('change',()=>updateFileName('fileInput','fileInputName'));
+    document.getElementById('routeFileInput')?.addEventListener('change',()=>updateFileName('routeFileInput','routeFileInputName'));
+  });
+
   /* ================= 파일 로드 이벤트 ================= */
   document.getElementById('fileInput').addEventListener('change', async function(e){
     const file=e.target.files[0];
     const keyword=document.getElementById('keywordInput').value.trim().toLowerCase();
     if(!file) return;
+    setLoading(true);
 
     try{
       let rawData=[];
@@ -1184,6 +1335,8 @@
     }catch(err){
       console.error(err);
       document.getElementById('warning').innerText='❗ 파일을 읽는 중 문제가 발생했습니다. (형식/인코딩 확인)';
+    }finally{
+      setLoading(false);
     }
   });
 
@@ -1197,6 +1350,7 @@
       return;
     }
     try{
+      setLoading(true);
       btn.textContent='내원경로: 읽는 중...';
       btn.disabled=true;
       const map = await loadRouteFileToMap(file);
@@ -1215,6 +1369,8 @@
       btn.textContent='내원경로: 업로드 실패';
       btn.disabled=true;
       document.getElementById('warning').innerText='❗ 내원경로 파일을 읽는 중 문제가 발생했습니다. (형식/인코딩 확인)';
+    }finally{
+      setLoading(false);
     }
   });
 
