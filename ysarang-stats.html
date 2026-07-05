@@ -4,27 +4,7 @@
   <meta charset="UTF-8" />
   <title>의사랑 연령별 통계</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
-
-    /* ===== 다크 / 라이트 테마 선택 ===== */
-    (function(){
-      function setTheme(mode){
-        document.body.classList.toggle('light', mode === 'light');
-        const darkBtn = document.getElementById('darkThemeBtn');
-        const lightBtn = document.getElementById('lightThemeBtn');
-        darkBtn?.classList.toggle('is-active', mode !== 'light');
-        lightBtn?.classList.toggle('is-active', mode === 'light');
-      }
-      document.addEventListener('DOMContentLoaded', function(){
-        const darkBtn = document.getElementById('darkThemeBtn');
-        const lightBtn = document.getElementById('lightThemeBtn');
-        darkBtn?.addEventListener('click', function(){ setTheme('dark'); });
-        lightBtn?.addEventListener('click', function(){ setTheme('light'); });
-        setTheme('dark');
-      });
-    })();
-
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <style>
     :root{--bg0:#080808;--bg1:#151515;--bg2:#2a241d;--gold:#bea98b;--gold2:#e8d8bd;--text:#f8f3ea;--muted:#b8b8b8;--card:rgba(255,255,255,.095);--card2:rgba(255,255,255,.06);--border:rgba(190,169,139,.30);--border2:rgba(190,169,139,.55);--thead:rgba(190,169,139,.24);--shadow:0 24px 60px rgba(0,0,0,.36)}
@@ -193,17 +173,17 @@
     }
 
 
-    /* ===== Dark / Light theme toggle ===== */
+    /* ===== Dark / Light theme toggle - grid removed version ===== */
     body.light{
       --bg0:#f5f2eb;
-      --bg1:#eee8dc;
-      --bg2:#d9ccb8;
+      --bg1:#fffaf4;
+      --bg2:#e6d8c3;
       --gold:#9f8764;
       --gold2:#6f5737;
       --text:#171717;
       --muted:#5f5a52;
-      --card:rgba(255,255,255,.72);
-      --card2:rgba(255,255,255,.52);
+      --card:rgba(255,255,255,.78);
+      --card2:rgba(255,255,255,.58);
       --border:rgba(159,135,100,.34);
       --border2:rgba(159,135,100,.58);
       --thead:rgba(159,135,100,.22);
@@ -213,11 +193,13 @@
         radial-gradient(circle at top center, rgba(159,135,100,.18), transparent 40%),
         linear-gradient(135deg,var(--bg0),var(--bg1) 48%,var(--bg2));
     }
+    body.light::after{content:none!important;display:none!important;background:none!important;}
+    body.light .wm img{opacity:.055;filter:grayscale(1) brightness(.9) contrast(1.04)}
     .theme-toggle{
       position:fixed;
       top:18px;
       right:18px;
-      z-index:50;
+      z-index:80;
       display:flex;
       gap:6px;
       padding:6px;
@@ -246,32 +228,61 @@
       border-color:var(--border2);
       color:#fff;
     }
-    body.light .theme-toggle{background:rgba(255,255,255,.72);box-shadow:0 14px 34px rgba(91,76,56,.16)}
+    body.light .theme-toggle{background:rgba(255,255,255,.76);box-shadow:0 14px 34px rgba(91,76,56,.16)}
     body.light .theme-toggle button{color:#6f5737}
     body.light .theme-toggle button.is-active{background:#6f5737;color:#fff;border-color:#6f5737}
-    body.light .wm img{opacity:.065;filter:grayscale(1) contrast(1.04)}
-    body.light h1, body.light .control-head h2, body.light .card-title, body.light .metric p, body.light .field-title, body.light .upload-main{color:#171717!important}
-    body.light p.sub, body.light .hint, body.light label, body.light .upload-sub, body.light .upload-name, body.light .bar-label{color:#6f6253!important}
-    body.light .badge{background:rgba(255,255,255,.58);color:#6f5737}
-    body.light .card, body.light .metric{background:linear-gradient(180deg,var(--card),var(--card2));box-shadow:var(--shadow)}
-    body.light .field-box, body.light .upload-zone, body.light #summaryOutput, body.light #output, body.light #byAgeOutput, body.light #ageOutput{background:rgba(255,255,255,.55)!important}
+    body.light h1,
+    body.light .control-head h2,
+    body.light .card-title,
+    body.light .metric p,
+    body.light .field-title,
+    body.light .upload-main,
+    body.light .modal-title{color:#171717!important}
+    body.light p.sub,
+    body.light .hint,
+    body.light label,
+    body.light .upload-sub,
+    body.light .upload-name,
+    body.light .bar-label,
+    body.light .pill{color:#6f6253!important}
+    body.light .badge{background:rgba(255,255,255,.58);color:#6f5737;border-color:rgba(159,135,100,.44)}
+    body.light .card,
+    body.light .metric,
+    body.light .modal{background:linear-gradient(180deg,var(--card),var(--card2))!important;box-shadow:var(--shadow);color:#171717}
     body.light .card::before{background:linear-gradient(135deg,rgba(159,135,100,.12),transparent 46%)}
-    body.light button, body.light .btn-mini{background:rgba(159,135,100,.10);color:#6f5737;border-color:rgba(159,135,100,.42)}
-    body.light button:hover, body.light .btn-mini:hover{background:rgba(159,135,100,.18);color:#2a241d}
-    body.light .primary, body.light .upload-button{background:linear-gradient(135deg,rgba(159,135,100,.72),rgba(159,135,100,.45));color:#fff;border-color:rgba(111,87,55,.55)}
-    body.light input[type=file], body.light input[type=date], body.light input[type=text]{background:rgba(255,255,255,.75)!important;color:#171717!important;border-color:rgba(159,135,100,.45)!important;color-scheme:light}
+    body.light .field-box,
+    body.light .upload-zone,
+    body.light #summaryOutput,
+    body.light #output,
+    body.light #byAgeOutput,
+    body.light #ageOutput,
+    body.light #oneshotTable,
+    body.light #oneshotModal,
+    body.light .table-card{background:rgba(255,255,255,.58)!important;border-color:rgba(159,135,100,.26)!important}
+    body.light button,
+    body.light .btn-mini{background:rgba(159,135,100,.10);color:#6f5737;border-color:rgba(159,135,100,.42)}
+    body.light button:hover,
+    body.light .btn-mini:hover{background:rgba(159,135,100,.18);color:#2a241d}
+    body.light .primary,
+    body.light .upload-button{background:linear-gradient(135deg,rgba(159,135,100,.72),rgba(159,135,100,.45));color:#fff;border-color:rgba(111,87,55,.55)}
+    body.light input[type=file],
+    body.light input[type=date],
+    body.light input[type=text],
+    body.light select{background:rgba(255,255,255,.80)!important;color:#171717!important;border-color:rgba(159,135,100,.34)!important;color-scheme:light}
     body.light input[type=date]::-webkit-date-and-time-value{color:#171717!important}
-    body.light input[type=date]::-webkit-calendar-picker-indicator{filter:none}
-    body.light table{background:transparent!important}
-    body.light th{background:linear-gradient(180deg,rgba(159,135,100,.30),rgba(159,135,100,.18))!important;color:#1f2937!important}
+    body.light input[type=date]::-webkit-calendar-picker-indicator{filter:none!important;opacity:.75}
+    body.light table{background:rgba(255,255,255,.64)!important;border-color:rgba(159,135,100,.22)!important}
+    body.light th{background:linear-gradient(180deg,rgba(159,135,100,.33),rgba(159,135,100,.18))!important;color:#3f3425!important;border-color:rgba(159,135,100,.20)!important}
     body.light td{color:#242424!important;border-bottom-color:rgba(159,135,100,.20)!important;border-right-color:rgba(159,135,100,.13)!important}
-    body.light td:first-child, body.light th:first-child{color:#5a4429!important}
+    body.light td:first-child,
+    body.light th:first-child{color:#5a4429!important}
     body.light tbody tr:hover td{background:rgba(159,135,100,.10)!important}
     body.light .upload-name{background:rgba(255,255,255,.58);border-color:rgba(159,135,100,.16)}
     body.light .bar-track{background:rgba(159,135,100,.12)}
     body.light .bar-fill{background:linear-gradient(90deg,rgba(159,135,100,.44),rgba(111,87,55,.88))}
     body.light .full-inner{background:linear-gradient(135deg,#f8f5ef,#eee5d6);border-color:var(--border2)}
     body.light .full-title{color:#171717}
+    body.light .modal-header{border-color:rgba(159,135,100,.22)!important}
     @media(max-width:560px){.theme-toggle{top:10px;right:10px;padding:5px}.theme-toggle button{height:30px;min-width:58px;font-size:12px;padding:0 9px}header{padding-top:58px}}
 
 </style>
@@ -1072,5 +1083,30 @@ function computeAgeBandStats(merged){
     });
 
   </script>
+
+  <script>
+    /* ===== Dark / Light theme toggle ===== */
+    document.addEventListener('DOMContentLoaded', () => {
+      const darkBtn = document.getElementById('darkThemeBtn');
+      const lightBtn = document.getElementById('lightThemeBtn');
+      if (!darkBtn || !lightBtn) return;
+
+      function setTheme(mode){
+        const isLight = mode === 'light';
+        document.body.classList.toggle('light', isLight);
+        lightBtn.classList.toggle('is-active', isLight);
+        darkBtn.classList.toggle('is-active', !isLight);
+        try { localStorage.setItem('jinsul-bit-1visit-theme', mode); } catch(e) {}
+      }
+
+      let saved = 'dark';
+      try { saved = localStorage.getItem('jinsul-bit-1visit-theme') || 'dark'; } catch(e) {}
+      setTheme(saved === 'light' ? 'light' : 'dark');
+
+      darkBtn.addEventListener('click', () => setTheme('dark'));
+      lightBtn.addEventListener('click', () => setTheme('light'));
+    });
+  </script>
+
 </body>
 </html>
