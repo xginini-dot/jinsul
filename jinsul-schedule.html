@@ -140,6 +140,55 @@ tr:last-child td { border-bottom:0; }
 .convert-tools label { margin:0; display:flex; align-items:center; gap:6px; font-size:13px; }
 .convert-tools input[type=checkbox] { width:auto; height:auto; accent-color:#7c6b55; }
 #mappingArea { width:100%; min-height:92px; margin-top:10px; border:1px solid #d8d0c4; border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.5; resize:vertical; display:none; }
+.file-picker{
+  height:44px;
+  width:100%;
+  border:1px solid #d8d0c4;
+  border-radius:12px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:5px 10px;
+  overflow:hidden;
+}
+.file-picker input[type=file]{
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+.file-btn{
+  flex:0 0 auto;
+  height:32px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  border-radius:9px;
+  border:1px solid #cfc6ba;
+  background:linear-gradient(180deg,#ffffff,#f2eee8);
+  color:#111827;
+  font-size:13px;
+  font-weight:900;
+  cursor:pointer;
+  margin:0;
+  white-space:nowrap;
+}
+.file-name{
+  min-width:0;
+  flex:1;
+  color:#4b5563;
+  font-size:13px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+body.dark-mode .file-picker{background:#0b1220;border-color:#475569}
+body.dark-mode .file-btn{background:#1f2937;color:#e5e7eb;border-color:#475569}
+body.dark-mode .file-name{color:#cbd5e1}
+
 .mini-btn { width:auto; height:34px; padding:0 12px; border-radius:10px; font-size:12px; }
 @media (max-width:940px) { .controls{grid-template-columns:1fr 1fr;} .summary{grid-template-columns:1fr 1fr;} .btns{grid-template-columns:1fr;} .brand-row{display:block;} .hero-badge{text-align:left;margin-top:18px;} .company .en{letter-spacing:.25em;} }
 @media (max-width:560px) { .wrap{padding:18px 12px 34px;} .hero{padding:24px 20px;border-radius:22px;} .brand-mark{align-items:flex-start;} .logo-box{width:68px;height:68px;border-radius:20px;} .hero h1{font-size:26px;} .company .en{font-size:19px;} }
@@ -185,7 +234,11 @@ body.dark-mode .util-btn{background:#111827;color:#e5e7eb;border-color:#475569}
     <div class="controls">
       <div>
         <label>엑셀 파일 업로드</label>
-        <input id="fileInput" type="file" accept=".xlsx,.xls" />
+        <div class="file-picker">
+          <label for="fileInput" class="file-btn">파일 선택</label>
+          <span id="fileName" class="file-name">선택된 파일 없음</span>
+          <input id="fileInput" type="file" accept=".xlsx,.xls" />
+        </div>
       </div>
       <div>
         <label>년도</label>
@@ -751,6 +804,8 @@ async function copyTable() {
 }
 document.getElementById('fileInput').addEventListener('change', async e => {
   const file=e.target.files[0]; if(!file) return;
+  const fileNameEl=document.getElementById('fileName');
+  if(fileNameEl) fileNameEl.textContent=file.name;
   const buf=await file.arrayBuffer();
   const wb=XLSX.read(buf, {type:'array', cellDates:true});
   scheduleData=parseWorkbook(wb);
