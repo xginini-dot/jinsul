@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>신경차단술 LA코드 단독/조합 통계</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --gold:#bda98b; --gold2:#d8c7aa; --gold3:#8f8069;
+      --bg:#080808; --bg2:#161616; --card:rgba(255,255,255,.075); --card2:rgba(255,255,255,.045);
+      --panel:rgba(18,18,18,.84); --panel2:rgba(255,255,255,.06);
+      --text:#f8f4ec; --muted:#b8b1a6; --line:rgba(189,169,139,.28);
+      --line2:rgba(255,255,255,.10); --field:#0f1115; --fieldText:#f8f4ec;
+      --shadow:0 24px 70px rgba(0,0,0,.40); --accent:#d8c7aa; --danger:#ef4444;
+      --thead:#181510; --trEven:rgba(255,255,255,.035); --hover:rgba(189,169,139,.10);
+    }
+    html[data-theme="light"] {
+      --bg:#f7f3ec; --bg2:#eef1f5; --card:rgba(255,255,255,.90); --card2:rgba(255,255,255,.68);
+      --panel:rgba(255,255,255,.92); --panel2:#fffaf2;
+      --text:#111827; --muted:#64748b; --line:#e2d8ca; --line2:#edf0f5;
+      --field:#ffffff; --fieldText:#111827; --shadow:0 24px 70px rgba(64,54,42,.14);
+      --accent:#9b7c52; --thead:#f7f2ea; --trEven:#fcfbf8; --hover:#f8f1e5;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0; min-height:100vh; color:var(--text);
+      font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+      background:
+        radial-gradient(circle at top center, rgba(190,169,139,.24), transparent 38%),
+        linear-gradient(135deg,var(--bg),var(--bg2) 48%,rgba(189,169,139,.16));
+      transition:background .25s ease,color .25s ease;
+    }
+    body::before{
+      content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background-image:url("https://xginini-dot.github.io/jinsul/진설로고.png");
+      background-repeat:no-repeat; background-position:center; background-size:min(620px,70vw);
+      opacity:.045; filter:grayscale(1);
+    }
+    html[data-theme="light"] body::before{opacity:.035;filter:grayscale(1)}
+    .wrap{max-width:1900px;margin:0 auto;padding:28px 24px 70px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}
+    .topbar-left,.topbar-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .brand-chip{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+    .brand-chip img{height:42px;width:auto;max-width:150px;object-fit:contain;filter:drop-shadow(0 10px 22px rgba(0,0,0,.20))}
+    .brand-chip span{font-size:12px;font-weight:1000;letter-spacing:.16em;color:var(--gold2)}
+    html[data-theme="light"] .brand-chip span{color:#8f8069}
+    .nav-btn{
+      min-height:46px;border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--text);
+      padding:0 16px;font-weight:1000;cursor:pointer;box-shadow:0 14px 34px rgba(0,0,0,.14);backdrop-filter:blur(14px);
+      display:inline-flex;align-items:center;gap:8px;transition:.18s ease;
+    }
+    .nav-btn:hover{transform:translateY(-2px);border-color:rgba(189,169,139,.72)}
+    .card{
+      background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:26px;
+      padding:26px 28px;box-shadow:var(--shadow);margin-bottom:20px;backdrop-filter:blur(14px);overflow:hidden;position:relative;
+    }
+    .card::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(189,169,139,.16),transparent 42%);opacity:.8;pointer-events:none}
+    .card>*{position:relative;z-index:1}
+    .hero{background:linear-gradient(135deg,rgba(17,24,39,.96),rgba(26,26,26,.88) 58%,rgba(63,52,36,.72));border-color:rgba(189,169,139,.45)}
+    html[data-theme="light"] .hero{background:linear-gradient(135deg,#ffffff,#fffaf2 58%,#f3eadc)}
+    .top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+    .badge{display:inline-flex;gap:8px;align-items:center;border-radius:999px;background:rgba(189,169,139,.14);color:var(--gold2);padding:8px 14px;font-size:13px;font-weight:1000;border:1px solid rgba(189,169,139,.34)}
+    html[data-theme="light"] .badge{color:#7c684b;background:#fbf6ee}
+    .dot{width:7px;height:7px;border-radius:999px;background:var(--gold2)}
+    h1{font-size:34px;letter-spacing:-.055em;margin:18px 0 10px;color:var(--text);font-weight:1000}
+    .sub{color:var(--muted);font-size:15px;line-height:1.7;font-weight:700}
+    .sub code,.hint code{background:rgba(189,169,139,.13);border:1px solid var(--line);border-radius:7px;padding:2px 6px;color:var(--accent)}
+    .codebox{font-size:12px;color:var(--muted);text-align:right;min-width:360px;font-weight:800}
+    .codebox code{display:inline-block;margin-top:6px;background:rgba(0,0,0,.18);color:var(--gold2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-width:720px;white-space:normal;line-height:1.55}
+    html[data-theme="light"] .codebox code{background:#fffaf2;color:#8f6f44}
+    .grid{display:grid;grid-template-columns:1.2fr .6fr .6fr;gap:16px;margin-top:24px}
+    .field label{display:block;color:var(--muted);font-size:13px;margin-bottom:8px;font-weight:950}
+    .field input,.field select{width:100%;height:50px;border-radius:15px;border:1px solid var(--line);background:var(--field);color:var(--fieldText);padding:0 14px;font-size:14px;font-weight:800;outline:none}
+    .field input:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(189,169,139,.12)}
+    .filebox{min-height:58px;display:flex;align-items:center;border:2px dashed rgba(189,169,139,.45);border-radius:18px;background:var(--panel2);padding:10px 14px;transition:.18s ease}
+    .filebox:hover{border-color:var(--gold);transform:translateY(-1px)}
+    .filebox input{height:auto;border:0;padding:0;background:transparent;color:var(--fieldText)}
+    .filebox input::file-selector-button{height:40px;border:0;border-radius:13px;background:linear-gradient(135deg,#1c2531,#111821);color:#fff;font-weight:1000;padding:0 16px;margin-right:12px;cursor:pointer}
+    .hint{font-size:13px;color:var(--muted);line-height:1.65;margin-top:10px;font-weight:750}
+    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+    .btn{border:1px solid rgba(189,169,139,.55);background:linear-gradient(135deg,#bda98b,#dfcaa4);color:#fff;border-radius:999px;padding:11px 18px;cursor:pointer;font-weight:1000;box-shadow:0 14px 30px rgba(189,169,139,.18);transition:.18s ease}
+    .btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
+    .btn.gray{border-color:var(--line);background:var(--panel2);color:var(--text);box-shadow:none}
+    .filters{display:grid;grid-template-columns:1fr 180px 180px;gap:12px;margin-top:18px}
+    .status{margin-top:14px;color:var(--accent);font-size:14px;font-weight:900}
+    .sectionTitle{display:flex;justify-content:space-between;gap:10px;align-items:flex-end;margin-bottom:10px}
+    .sectionTitle h2{font-size:22px;margin:0;font-weight:1000;letter-spacing:-.04em}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0 20px}
+    .kpi{background:linear-gradient(135deg,rgba(17,24,39,.95),rgba(44,48,53,.86));border:1px solid rgba(189,169,139,.42);border-radius:20px;padding:18px 20px;box-shadow:0 18px 36px rgba(0,0,0,.12);position:relative;overflow:hidden}
+    html[data-theme="light"] .kpi{background:linear-gradient(135deg,#111821,#2c3035);color:#fff}
+    .kpi::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:linear-gradient(180deg,#d8c7aa,#8f8069)}
+    .kpi .t{color:#d8c7aa;font-size:13px;font-weight:1000}
+    .kpi .v{font-size:30px;font-weight:1000;margin-top:6px;color:#fff;letter-spacing:-.05em}
+    .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .tab{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:999px;padding:10px 16px;cursor:pointer;font-weight:1000;transition:.18s ease}
+    .tab.active{border-color:rgba(189,169,139,.65);background:rgba(189,169,139,.16);color:var(--accent)}
+    .pill{display:inline-flex;border-radius:999px;padding:4px 9px;background:rgba(148,163,184,.14);color:var(--muted);font-size:12px;font-weight:1000;border:1px solid var(--line)}
+    .pill.combo{background:rgba(189,169,139,.14);color:var(--accent);border-color:rgba(189,169,139,.34)}
+    .hidden{display:none!important}
+    .tableWrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:var(--panel);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+    table{width:100%;border-collapse:collapse;font-size:13px;min-width:900px;background:transparent}
+    th,td{border-bottom:1px solid var(--line2);padding:12px 14px;text-align:center;white-space:nowrap;color:var(--text)}
+    th{position:sticky;top:0;background:var(--thead);color:var(--text);font-size:12px;font-weight:1000;z-index:2;border-bottom:1px solid var(--line)}
+    td{font-weight:800}
+    td.left,th.left{text-align:left}
+    tbody tr:nth-child(even) td{background:var(--trEven)}
+    tr:hover td{background:var(--hover)}
+    .num{color:var(--accent);font-weight:1000}
+    .empty{color:var(--muted);padding:42px 10px;text-align:center;font-weight:900}
+    footer{text-align:center;color:var(--muted);font-size:12px;font-weight:800;margin-top:22px}
+    @media(max-width:980px){
+      .wrap{padding:18px 14px 50px}.topbar,.top,.grid,.filters,.summary{display:block}.topbar-right{margin-top:12px}.field,.kpi{margin-top:12px}.codebox{text-align:left;min-width:0;margin-top:18px}.actions{justify-content:flex-start}h1{font-size:27px}.card{padding:22px 18px;border-radius:22px}.brand-chip{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="nav-btn" onclick="history.back()">← 뒤로가기</button>
+      <div class="brand-chip"><img src="https://xginini-dot.github.io/jinsul/진설로고.png" alt="JINSUL Logo"><span>JINSUL ANALYTICS</span></div>
+    </div>
+    <div class="topbar-right">
+      <button class="nav-btn" onclick="toggleTheme()">◐ <span id="themeLabel">다크</span> 모드</button>
+    </div>
+  </div>
+
+  <div class="card hero">
+    <div class="top">
+      <div>
+        <div class="badge"><span class="dot"></span>신경차단술 LA코드 자동 통계</div>
+        <h1>신경차단술 LA코드 단독/조합 통계</h1>
+        <div class="sub">
+          여러 LA코드 엑셀을 한 번에 업로드하면 <b>동일 환자·동일 날짜</b> 기준으로 하나의 차단술 방문으로 묶어 집계합니다.<br>
+          예) 같은 날 같은 환자에게 <code>LA274</code>와 <code>LA358</code>가 있으면 <code>LA274 + LA358</code> 1건으로 계산합니다.<br>
+          같은 환자·같은 날짜·같은 LA코드가 여러 줄이면 <b>1명으로 카운트</b>하고, 총투여량은 합산합니다.
+        </div>
+      </div>
+      <div class="codebox">인식된 LA코드<br><code id="codeList">-</code></div>
+    </div>
+
+    <div class="grid">
+      <div class="field">
+        <label>엑셀 파일 업로드 (*.xls, *.xlsx) — 여러 파일 선택 가능</label>
+        <div class="filebox"><input type="file" id="fileInput" multiple accept=".xls,.xlsx" /></div>
+        <div class="hint">
+          ① LA274.xls, LA358.xls처럼 코드별 파일을 한 번에 선택 가능<br>
+          ② 파일명이 <b>la2751</b>처럼 뒤에 붙어도 앞 5자리 기준으로 <b>LA275</b>로 인식<br>
+          ③ 파일 안에 LA코드 컬럼이 있으면 컬럼값을 우선 사용하고, 없으면 파일명 기준으로 인식
+        </div>
+      </div>
+      <div class="field"><label>시작 월</label><select id="monthStart" disabled></select></div>
+      <div class="field"><label>종료 월</label><select id="monthEnd" disabled></select></div>
+    </div>
+
+    <div class="filters">
+      <div class="field"><label>조합 검색</label><input id="searchInput" placeholder="예: LA358 또는 LA274 + LA358" /></div>
+      <div class="field"><label>구분</label><select id="typeFilter"><option value="all">전체</option><option value="single">단독</option><option value="combo">조합</option></select></div>
+      <div class="field"><label>최소 건수</label><input id="minCount" type="number" min="1" value="1" /></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn gray" id="resetBtn">초기화</button>
+      <button class="btn" id="exportBtn">엑셀 다운로드</button>
+    </div>
+    <div class="status" id="status">엑셀 파일을 선택하면 자동으로 분석합니다.</div>
+  </div>
+
+  <div class="card">
+    <div class="sectionTitle">
+      <div>
+        <h2>LA코드 단독/조합 통계</h2>
+        <div class="hint">건수 = 동일 환자·동일 날짜 기준 방문 수 / 비율 = 전체 차단술 방문 대비 비율</div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="kpi"><div class="t">전체 차단술 방문</div><div class="v" id="kTotal">0</div></div>
+      <div class="kpi"><div class="t">단독 방문</div><div class="v" id="kSingle">0</div></div>
+      <div class="kpi"><div class="t">조합 방문</div><div class="v" id="kCombo">0</div></div>
+      <div class="kpi"><div class="t">인식 코드 수</div><div class="v" id="kCodes">0</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="code">① 코드 조합 기준</button>
+      <button class="tab" data-tab="dose">② 총투여량 포함 기준</button>
+    </div>
+
+    <div id="tabCode">
+      <div class="tableWrap"><table id="codeTable"></table></div>
+    </div>
+    <div id="tabDose" class="hidden">
+      <div class="hint" style="margin-bottom:10px;">예: <code>LA274 1.0 + LA358 2.0</code> / 환자 1명당 같은 날짜 기준 총투여량으로 계산</div>
+      <div class="tableWrap"><table id="doseTable"></table></div>
+    </div>
+  </div>
+  <footer>© JINSUL. Internal analytics dashboard.</footer>
+</div>
+
+<script>
+(function(){
+  const saved = localStorage.getItem('jinsul-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  window.toggleTheme = function(){
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('jinsul-theme', next);
+    const label = document.getElementById('themeLabel');
+    if(label) label.textContent = next === 'dark' ? '다크' : '라이트';
+  };
+  window.addEventListener('DOMContentLoaded',()=>{
+    const label = document.getElementById('themeLabel');
+    if(label) label.textContent = saved === 'dark' ? '다크' : '라이트';
+  });
+})();
+</script>
+
+<script>
+const fileInput=document.getElementById('fileInput'), monthStart=document.getElementById('monthStart'), monthEnd=document.getElementById('monthEnd');
+const searchInput=document.getElementById('searchInput'), typeFilter=document.getElementById('typeFilter'), minCount=document.getElementById('minCount');
+const statusEl=document.getElementById('status'), codeListEl=document.getElementById('codeList');
+const codeTable=document.getElementById('codeTable'), doseTable=document.getElementById('doseTable');
+const kTotal=document.getElementById('kTotal'), kSingle=document.getElementById('kSingle'), kCombo=document.getElementById('kCombo'), kCodes=document.getElementById('kCodes');
+let rawRows=[], months=[], currentStats=null, activeTab='code';
+
+fileInput.addEventListener('change', handleFiles);
+[monthStart,monthEnd,searchInput,typeFilter,minCount].forEach(el=>el.addEventListener('input', recalc));
+document.getElementById('resetBtn').onclick=resetAll; document.getElementById('exportBtn').onclick=exportExcel;
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{activeTab=btn.dataset.tab;document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('tabCode').classList.toggle('hidden',activeTab!=='code');document.getElementById('tabDose').classList.toggle('hidden',activeTab!=='dose');});
+
+async function handleFiles(e){
+  const files=Array.from(e.target.files||[]); if(!files.length) return;
+  rawRows=[]; statusEl.textContent='엑셀을 읽는 중입니다...';
+  try{
+    for(const f of files){
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array',cellDates:true});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const aoa=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null,raw:false});
+      const fileCode=codeFromFileName(f.name);
+      const parsed=parseAoaRows(aoa,fileCode,f.name);
+      rawRows.push(...parsed);
+    }
+    months=[...new Set(rawRows.map(r=>r.ym).filter(Boolean))].sort(); setupMonths(); recalc();
+    statusEl.textContent=`파일 ${files.length}개 / 유효 행 ${rawRows.length.toLocaleString()}건 분석 완료`;
+  }catch(err){console.error(err);statusEl.textContent='엑셀 분석 중 오류가 발생했습니다. 파일 형식을 확인해주세요.';}
+}
+
+function parseAoaRows(aoa,fileCode,fileName){
+  const headerIdx=findHeaderRow(aoa); if(headerIdx<0) return [];
+  const headers=aoa[headerIdx].map(v=>(v??'').toString().trim());
+  const idx={chart:findIdx(headers,['차트번호','환자번호','등록번호','수진자번호','챠트번호']), date:findIdx(headers,['내원일','진료일','처방일','일자','날짜']), dose:findIdx(headers,['총투여량','총 투여량','총량','투여량합']), qty:findIdx(headers,['투여량','1회투여량','1회 투여량']), days:findIdx(headers,['투여일수','일수']), code:findIdx(headers,['코드','처방코드','수가코드','LA코드'])};
+  const out=[];
+  for(let i=headerIdx+1;i<aoa.length;i++){
+    const row=aoa[i]||[];
+    const chart=clean(row[idx.chart]); const d=parseDate(row[idx.date]); if(!chart||!d) continue;
+    let code=idx.code>=0?normalizeLACode(row[idx.code]):''; if(!code) code=fileCode; if(!code) continue;
+    const doseTotal=idx.dose>=0?toNum(row[idx.dose]):0; const qty=idx.qty>=0?toNum(row[idx.qty]):0; const days=idx.days>=0?toNum(row[idx.days]):0;
+    const dose=doseTotal || (qty*(days||1)) || 0;
+    out.push({chart,date:d,dateKey:dateKey(d),ym:ymKey(d),code,dose,fileName});
+  }
+  return out;
+}
+function findHeaderRow(aoa){for(let i=0;i<Math.min(20,aoa.length);i++){const s=(aoa[i]||[]).map(v=>(v??'').toString()).join('|'); if(/차트번호|환자번호|등록번호/.test(s)&&/내원일|진료일|처방일|일자|날짜/.test(s)) return i;} return -1;}
+function findIdx(headers,keys){return headers.findIndex(h=>keys.some(k=>h.replace(/\s/g,'').includes(k.replace(/\s/g,''))));}
+function codeFromFileName(name){const base=(name||'').toUpperCase().replace(/[^A-Z0-9]/g,''); const m=base.match(/LA\d{3}/); return m?m[0]:'';}
+function normalizeLACode(v){const s=(v??'').toString().toUpperCase(); const m=s.match(/LA\s*(\d{3})/); return m?'LA'+m[1]:'';}
+function clean(v){return (v??'').toString().trim();}
+function toNum(v){if(v===null||v===undefined||v==='')return 0; const n=parseFloat(v.toString().replace(/,/g,'').trim()); return isNaN(n)?0:n;}
+function parseDate(v){if(!v&&v!==0)return null; if(v instanceof Date&&!isNaN(v))return new Date(v.getFullYear(),v.getMonth(),v.getDate()); let s=v.toString().trim(); if(!s)return null; s=s.split(' ')[0].replace(/[.\/]/g,'-'); let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m)return new Date(+m[1],+m[2]-1,+m[3]); m=s.match(/^(\d{4})(\d{2})(\d{2})$/); if(m)return new Date(+m[1],+m[2]-1,+m[3]); const d=new Date(s); return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;} function ymKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function setupMonths(){monthStart.innerHTML='';monthEnd.innerHTML=''; if(!months.length){monthStart.disabled=monthEnd.disabled=true;return;} months.forEach(m=>{monthStart.add(new Option(m,m));monthEnd.add(new Option(m,m));}); monthStart.value=months[0];monthEnd.value=months[months.length-1];monthStart.disabled=monthEnd.disabled=false;}
+function recalc(){if(!rawRows.length){renderEmpty();return;} const s=monthStart.value||months[0], e=monthEnd.value||months[months.length-1]; const filtered=rawRows.filter(r=>!r.ym||(r.ym>=s&&r.ym<=e)); currentStats=calcStats(filtered); render();}
+function calcStats(rows){
+  const visitMap=new Map(), codeSet=new Set();
+  for(const r of rows){codeSet.add(r.code); const key=`${r.chart}|${r.dateKey}`; if(!visitMap.has(key)) visitMap.set(key,new Map()); const m=visitMap.get(key); m.set(r.code,(m.get(r.code)||0)+r.dose);}
+  const codeMap=new Map(), doseMap=new Map(); let total=0,single=0,combo=0;
+  for(const m of visitMap.values()){
+    const entries=[...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'ko',{numeric:true})); if(!entries.length) continue; total++; if(entries.length===1) single++; else combo++;
+    const codeKey=entries.map(e=>e[0]).join(' + '); const doseKey=entries.map(([c,d])=>`${c} ${fmtDose(d)}`).join(' + '); const sumDose=entries.reduce((a,e)=>a+e[1],0);
+    add(codeMap,codeKey,entries.length,sumDose); add(doseMap,doseKey,entries.length,sumDose);
+  }
+  return {total,single,combo,codeSet,codeRows:finalRows(codeMap,total,false),doseRows:finalRows(doseMap,total,true)};
+}
+function add(map,key,n,sumDose){if(!map.has(key))map.set(key,{key,count:0,codeCount:n,totalDoseSum:0}); const o=map.get(key); o.count++; o.totalDoseSum+=sumDose;}
+function finalRows(map,total,isDose){return [...map.values()].sort((a,b)=>b.count-a.count||a.codeCount-b.codeCount||a.key.localeCompare(b.key,'ko',{numeric:true})).map((r,i)=>({rank:i+1,key:r.key,count:r.count,codeCount:r.codeCount,type:r.codeCount===1?'단독':'조합',pct:total?r.count/total*100:0,avgDose:r.count?r.totalDoseSum/r.count:0}));}
+function render(){const st=currentStats;if(!st){renderEmpty();return;} const codes=[...st.codeSet].sort((a,b)=>a.localeCompare(b,'ko',{numeric:true})); codeListEl.textContent=codes.length?codes.join(', '):'-'; kTotal.textContent=fmtInt(st.total);kSingle.textContent=fmtInt(st.single);kCombo.textContent=fmtInt(st.combo);kCodes.textContent=fmtInt(codes.length); renderTable(codeTable,filterRows(st.codeRows),false); renderTable(doseTable,filterRows(st.doseRows),true);}
+function filterRows(rows){const q=searchInput.value.trim().toUpperCase().replace(/\s+/g,' '); const t=typeFilter.value; const min=Number(minCount.value)||1; return rows.filter(r=>r.count>=min).filter(r=>t==='all'||(t==='single'&&r.codeCount===1)||(t==='combo'&&r.codeCount>1)).filter(r=>!q||r.key.toUpperCase().includes(q.replace(/\s*\+\s*/g,' + ')));}
+function renderTable(el,rows,isDose){if(!rows.length){el.innerHTML='<tbody><tr><td class="empty">조회되는 결과가 없습니다.</td></tr></tbody>';return;} let html='<thead><tr><th>순위</th><th>구분</th><th class="left">'+(isDose?'LA코드 + 환자당 총투여량':'LA코드 단독/조합')+'</th>'+(isDose?'<th>환자당 총투여량 합</th>':'')+'<th>건수</th><th>차단술조합 비율</th></tr></thead><tbody>'; rows.forEach((r,i)=>{html+=`<tr><td>${i+1}</td><td><span class="pill ${r.codeCount>1?'combo':''}">${r.type}</span></td><td class="left"><b>${r.key}</b></td>${isDose?`<td class="num">${fmtDose(r.avgDose)}</td>`:''}<td class="num">${fmtInt(r.count)}</td><td class="num">${r.pct.toFixed(2)}%</td></tr>`}); html+='</tbody>'; el.innerHTML=html;}
+function renderEmpty(){codeTable.innerHTML='<tbody><tr><td class="empty">엑셀 업로드 후 결과가 표시됩니다.</td></tr></tbody>'; doseTable.innerHTML=codeTable.innerHTML; kTotal.textContent=kSingle.textContent=kCombo.textContent=kCodes.textContent='0';}
+function fmtInt(n){return Number(n||0).toLocaleString();} function fmtDose(n){return (Math.round((n||0)*100)/100).toFixed(1).replace(/\.0$/,'.0');}
+function resetAll(){rawRows=[];months=[];currentStats=null;fileInput.value='';monthStart.innerHTML='';monthEnd.innerHTML='';monthStart.disabled=monthEnd.disabled=true;searchInput.value='';typeFilter.value='all';minCount.value=1;codeListEl.textContent='-';statusEl.textContent='엑셀 파일을 선택하면 자동으로 분석합니다.';renderEmpty();}
+function exportExcel(){if(!currentStats){alert('먼저 엑셀을 업로드해주세요.');return;} const wb=XLSX.utils.book_new(); const codeData=[['순위','구분','LA코드 단독/조합','건수','차단술조합 비율(%)'],...filterRows(currentStats.codeRows).map((r,i)=>[i+1,r.type,r.key,r.count,Math.round(r.pct*100)/100])]; const doseData=[['순위','구분','LA코드 + 환자당 총투여량','환자당 총투여량 합','건수','차단술조합 비율(%)'],...filterRows(currentStats.doseRows).map((r,i)=>[i+1,r.type,r.key,Number(fmtDose(r.avgDose)),r.count,Math.round(r.pct*100)/100])]; XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(codeData),'코드조합'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(doseData),'투여량포함'); XLSX.writeFile(wb,'신경차단술_LA코드_단독조합통계.xlsx');}
+renderEmpty();
+</script>
+</body>
+</html>
