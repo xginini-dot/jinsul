@@ -23,6 +23,27 @@
       padding: 48px 24px;
     }
 
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+
+    .logout-btn {
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.12);
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.22);
+    }
+
     .header {
       color: white;
       margin-bottom: 40px;
@@ -114,6 +135,13 @@
 </head>
 <body>
   <main class="wrap">
+
+    <div class="topbar">
+      <button class="logout-btn" onclick="location.href='/cdn-cgi/access/logout'">
+        로그아웃
+      </button>
+    </div>
+
     <section class="header">
       <div class="badge">JINSUL INTERNAL SYSTEM</div>
       <h1>JINSUL PORTAL</h1>
