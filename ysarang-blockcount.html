@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>신경차단술 수신자당·건당 횟수 (보험유형 3구역)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- SheetJS (엑셀 파서) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #020617;
+      --accent: #22d3ee;
+      --accent-soft: rgba(34, 211, 238, 0.1);
+      --accent-border: rgba(34, 211, 238, 0.3);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #f97373;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, "Noto Sans KR", sans-serif;
+      background: radial-gradient(circle at top, #0b1120 0, #000 55%);
+      color: var(--text);
+    }
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: -0.04em;
+    }
+    .header {
+      margin-bottom: 12px;
+    }
+    .header-sub {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .chip {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--accent-border);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin: 4px 0 14px;
+      flex-wrap: wrap;
+    }
+    .top-actions button {
+      border-radius: 999px;
+      border: 1px solid var(--accent-border);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 5px 12px;
+      cursor: pointer;
+    }
+    .top-actions button:hover {
+      border-color: var(--accent);
+    }
+
+    /* ===== 기간 선택 바 ===== */
+    .period-bar {
+      margin: 12px 0 18px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.92);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 20px;
+      align-items: flex-end;
+    }
+    .period-label-main {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .period-control {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .period-caption {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .period-input-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .period-control input[type="month"] {
+      background: #020617;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 24px 4px 10px;
+      outline: none;
+      min-width: 120px;
+    }
+    .period-input-icon {
+      position: absolute;
+      right: 8px;
+      font-size: 10px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .period-separator {
+      align-self: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    #period-reset {
+      margin-left: auto;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #period-reset:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .period-help {
+      font-size: 11px;
+      color: var(--muted);
+      width: 100%;
+      margin-top: 2px;
+    }
+    @media (max-width: 640px) {
+      .period-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      #period-reset {
+        margin-left: 0;
+        align-self: flex-start;
+      }
+      .period-control input[type="month"] {
+        width: 120px;
+      }
+    }
+    /* ===== /기간 선택 바 ===== */
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr 1.1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: radial-gradient(circle at top left, #0b1120 0, #020617 50%);
+      box-shadow: 0 16px 30px rgba(15, 23, 42, 0.9);
+      padding: 14px 14px 10px;
+    }
+    .card-title {
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .card-tag {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .file-zone {
+      border-radius: 12px;
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      padding: 10px;
+      font-size: 12px;
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .file-zone input[type="file"] {
+      margin-top: 8px;
+      width: 100%;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .file-hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .file-list {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .summary-pill {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .summary-pill span {
+      margin-right: 8px;
+    }
+    .summary-pill .warn {
+      color: var(--danger);
+    }
+
+    h2 {
+      margin: 22px 0 8px;
+      font-size: 17px;
+      letter-spacing: -0.03em;
+    }
+    .note {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    th, td {
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      padding: 6px 8px;
+      text-align: right;
+      white-space: nowrap;
+    }
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+    thead th {
+      background: rgba(15, 23, 42, 0.98);
+      color: var(--muted);
+      font-weight: 500;
+    }
+    tbody tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.9);
+    }
+    tbody tr:nth-child(odd) {
+      background: rgba(15, 23, 42, 0.96);
+    }
+    .cell-strong {
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    .cell-total {
+      background: rgba(15, 118, 110, 0.25);
+    }
+
+    .table-wrap {
+      margin-bottom: 20px;
+    }
+  
+
+/* ================= JINSUL STANDARD DESIGN OVERRIDE ================= */
+:root {
+  --j-bg: #f4efe6; --j-bg2: #e9dfcf; --j-card: rgba(255,255,255,.72); --j-card-strong: rgba(255,255,255,.9);
+  --j-text: #202634; --j-muted: #7b8190; --j-line: rgba(126,105,70,.22); --j-gold: #b89f72; --j-gold2: #8f7650;
+  --j-shadow: 0 24px 70px rgba(72,58,35,.16); --bg: var(--j-bg); --card: var(--j-card); --accent: var(--j-gold);
+  --accent-soft: rgba(184,159,114,.14); --accent-border: rgba(184,159,114,.42); --text: var(--j-text); --muted: var(--j-muted); --danger: #d66b6b;
+}
+html[data-theme="dark"] {
+  --j-bg: #080808; --j-bg2: #2a241d; --j-card: rgba(255,255,255,.08); --j-card-strong: rgba(255,255,255,.13);
+  --j-text: #f5efe5; --j-muted: #b8b1a4; --j-line: rgba(190,169,139,.28); --j-gold: #c9b89c; --j-gold2: #967e56;
+  --j-shadow: 0 24px 70px rgba(0,0,0,.42); --bg: #080808; --card: var(--j-card); --accent: var(--j-gold);
+  --accent-soft: rgba(190,169,139,.14); --accent-border: rgba(190,169,139,.48); --text: var(--j-text); --muted: var(--j-muted); --danger: #ff8b8b;
+}
+body { background: radial-gradient(circle at top center, rgba(190,169,139,.22), transparent 38%), linear-gradient(135deg, var(--j-bg), var(--j-bg2)) !important; color: var(--j-text) !important; min-height: 100vh; position: relative; overflow-x: hidden; }
+body::before { content: ""; position: fixed; inset: 0; background-image: url("https://xginini-dot.github.io/jinsul/진설로고.png"); background-repeat: no-repeat; background-position: center 38%; background-size: min(520px, 58vw); opacity: .055; filter: grayscale(1); pointer-events: none; z-index: 0; }
+html[data-theme="dark"] body::before { opacity: .07; }
+.page { max-width: 1240px !important; position: relative; z-index: 1; }
+.header { text-align: center; padding: 76px 20px 18px; margin-bottom: 18px !important; }
+.header::before { content: ""; display: block; width: min(250px, 56vw); height: 120px; margin: 0 auto 18px; background-image: url("https://xginini-dot.github.io/jinsul/진설로고.png"); background-repeat: no-repeat; background-position: center; background-size: contain; opacity: .82; filter: drop-shadow(0 18px 35px rgba(0,0,0,.18)); }
+h1 { font-size: clamp(24px, 3.1vw, 42px) !important; font-weight: 900 !important; letter-spacing: -.04em !important; color: var(--j-text) !important; }
+.header-sub { justify-content: center; line-height: 1.65; color: var(--j-muted) !important; max-width: 960px; margin: 0 auto; }
+.chip { border-color: var(--accent-border) !important; background: var(--accent-soft) !important; color: var(--j-gold2) !important; font-weight: 800; }
+html[data-theme="dark"] .chip { color: var(--j-gold) !important; }
+.jinsul-toolbar { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 10px; }
+.jinsul-tool-btn, .top-actions button, #period-reset { border: 1px solid var(--j-line) !important; background: var(--j-card-strong) !important; color: var(--j-text) !important; border-radius: 999px !important; padding: 10px 16px !important; font-size: 12px !important; font-weight: 900 !important; cursor: pointer; box-shadow: 0 10px 24px rgba(0,0,0,.08); backdrop-filter: blur(12px); transition: .16s ease; }
+.jinsul-tool-btn:hover, .top-actions button:hover, #period-reset:hover { border-color: var(--j-gold) !important; transform: translateY(-1px); }
+.top-actions { justify-content: flex-end !important; gap: 10px !important; }
+.card, .period-bar, .note, .file-zone { background: linear-gradient(180deg, var(--j-card-strong), var(--j-card)) !important; border: 1px solid var(--j-line) !important; border-radius: 24px !important; box-shadow: var(--j-shadow) !important; backdrop-filter: blur(14px); }
+.grid { gap: 20px !important; }
+.card { padding: 22px !important; }
+.card-title, h2 { color: var(--j-text) !important; font-weight: 900 !important; }
+.card-tag, .file-hint, .note, .summary-pill, .period-caption, .period-help, .header-sub { color: var(--j-muted) !important; }
+input[type="file"], input[type="month"] { background: rgba(255,255,255,.42) !important; border: 1px solid var(--j-line) !important; color: var(--j-text) !important; }
+html[data-theme="dark"] input[type="file"], html[data-theme="dark"] input[type="month"] { background: rgba(0,0,0,.22) !important; }
+table { overflow: hidden; border-radius: 18px; border-collapse: separate !important; border-spacing: 0 !important; }
+th, td { border-color: var(--j-line) !important; color: var(--j-text) !important; }
+thead th { background: rgba(184,159,114,.16) !important; color: var(--j-muted) !important; font-weight: 900 !important; }
+tbody tr:nth-child(even), tbody tr:nth-child(odd) { background: rgba(255,255,255,.38) !important; }
+html[data-theme="dark"] tbody tr:nth-child(even), html[data-theme="dark"] tbody tr:nth-child(odd) { background: rgba(255,255,255,.045) !important; }
+.cell-strong { color: var(--j-gold2) !important; font-weight: 900 !important; }
+html[data-theme="dark"] .cell-strong { color: var(--j-gold) !important; }
+.cell-total { background: rgba(184,159,114,.22) !important; font-weight: 900; }
+.table-wrap { position: relative; z-index: 1; }
+@media (max-width: 720px) { .jinsul-toolbar { top: 12px; width: calc(100% - 28px); justify-content: center; } .jinsul-tool-btn { flex: 1; } .header { padding-top: 86px; } }
+
+  </style>
+</head>
+<body>
+  <div class="jinsul-toolbar">
+    <button type="button" class="jinsul-tool-btn" onclick="jinsulGoBack()">← 뒤로가기</button>
+    <button type="button" class="jinsul-tool-btn" id="jinsulThemeToggle" onclick="jinsulToggleTheme()">🌙 다크</button>
+  </div>
+
+  <div class="page">
+    <header class="header">
+      <h1>신경차단술 수신자당·건당 횟수 (보험유형 3구역)</h1>
+      <div class="header-sub">
+        <span>LA코드·보험유형별로 미리 필터링된 엑셀을 구역별(건강/의료급여/자보)로 올려서, 수신자당·건당 횟수 및 65세 기준 통계를 확인합니다.</span>
+        <span class="chip">수신자당 = 환자 1명당 기간 전체 투여량(평균)</span>
+        <span class="chip">건당 = 동일 환자·동일 날짜 투여량 합산 → 방문 1건당 평균 투여량</span>
+      </div>
+    </header>
+
+    <div class="top-actions">
+      <button type="button" id="btn-back">뒤로 가기</button>
+      <button type="button" id="btn-reset-all">초기화</button>
+      <button type="button" id="btn-export-excel">엑셀 다운로드</button>
+    </div>
+
+    <!-- 기간 선택 바 -->
+    <div class="period-bar">
+      <div style="flex: 1 1 100%; min-width: 140px;">
+        <div class="period-label-main">기간 선택 (내원일 기준)</div>
+      </div>
+
+      <div class="period-control">
+        <div class="period-caption">시작 월 선택</div>
+        <div class="period-input-wrap">
+          <input type="month" id="period-from" />
+          <span class="period-input-icon">▼</span>
+        </div>
+      </div>
+
+      <div class="period-separator">~</div>
+
+      <div class="period-control">
+        <div class="period-caption">종료 월 선택</div>
+        <div class="period-input-wrap">
+          <input type="month" id="period-to" />
+          <span class="period-input-icon">▼</span>
+        </div>
+      </div>
+
+      <button id="period-reset">전체 기간</button>
+
+      <div class="period-help">
+        · 시작/종료 월 박스를 클릭하면 원하는 월로 변경할 수 있습니다. (예: 2025-01)
+      </div>
+    </div>
+
+    <!-- 업로드 카드: 건강보험 / 의료급여 / 자보 -->
+    <section class="grid">
+      <!-- 국민건강보험 -->
+      <article class="card">
+        <div class="card-title">국민건강보험</div>
+        <div class="card-tag">3구역 신경차단술 · 건강보험 대상자</div>
+        <div class="file-zone">
+          <div>의사랑 사용자통계에서 건강보험 구역 엑셀 파일을 업로드해 주세요.</div>
+          <input id="file-nhis" type="file" accept=".xlsx,.xls" multiple />
+          <div class="file-hint">· 같은 기간·병원 데이터를 여러 파일로 나누어도 됩니다. (여러 파일 동시 업로드 가능)</div>
+          <div id="file-list-nhis" class="file-list"></div>
+        </div>
+        <div id="summary-nhis" class="summary-pill">대기 중</div>
+      </article>
+
+      <!-- 보호(의료급여) -->
+      <article class="card">
+        <div class="card-title">보호(의료급여)</div>
+        <div class="card-tag">3구역 신경차단술 · 보호/의료급여 대상자</div>
+        <div class="file-zone">
+          <div>의사랑 사용자통계에서 보호(의료급여) 구역 엑셀 파일을 업로드해 주세요.</div>
+          <input id="file-medicaid" type="file" accept=".xlsx,.xls" multiple />
+          <div class="file-hint">· 여러 파일을 동시에 올려도 하나의 집계로 합산됩니다.</div>
+          <div id="file-list-medicaid" class="file-list"></div>
+        </div>
+        <div id="summary-medicaid" class="summary-pill">대기 중</div>
+      </article>
+
+      <!-- 자보 -->
+      <article class="card">
+        <div class="card-title">자보</div>
+        <div class="card-tag">3구역 신경차단술 · 자동차보험 대상자</div>
+        <div class="file-zone">
+          <div>의사랑 사용자통계에서 자보 구역 엑셀 파일을 업로드해 주세요.</div>
+          <input id="file-auto" type="file" accept=".xlsx,.xls" multiple />
+          <div class="file-hint">· 자보 역시 여러 파일 업로드 가능 · 기간은 상단에서 별도 선택</div>
+          <div id="file-list-auto" class="file-list"></div>
+        </div>
+        <div id="summary-auto" class="summary-pill">대기 중</div>
+      </article>
+    </section>
+
+    <!-- 전체 요약 테이블 -->
+    <section class="table-wrap">
+      <h2>① 신경차단술 전체 요약</h2>
+      <div id="table-overall-wrapper">
+        <div class="note">엑셀 파일 업로드 후, 통계가 이 영역에 표시됩니다.</div>
+      </div>
+    </section>
+
+    <!-- 연령별 요약 테이블 -->
+    <section class="table-wrap">
+      <h2>② 65세 이상 / 미만 비율 및 건당 횟수</h2>
+      <div id="table-age-wrapper">
+        <div class="note">엑셀 업로드 후, 주민등록번호 또는 생년월일 정보가 있을 경우 연령별 통계가 표시됩니다.</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+  /* ===== JINSUL THEME + BACK ===== */
+  (function(){
+    const saved = localStorage.getItem('jinsul-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    window.addEventListener('DOMContentLoaded', jinsulSyncThemeButton);
+  })();
+  function jinsulSyncThemeButton(){
+    const btn = document.getElementById('jinsulThemeToggle');
+    const theme = document.documentElement.getAttribute('data-theme') || 'light';
+    if (btn) btn.textContent = theme === 'dark' ? '☀️ 라이트' : '🌙 다크';
+  }
+  function jinsulToggleTheme(){
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('jinsul-theme', next);
+    jinsulSyncThemeButton();
+  }
+  function jinsulGoBack(){
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = 'index.html';
+  }
+
+  // ---------- 공통 상태 ----------
+  const state = {
+    nhis: [],
+    medicaid: [],
+    auto: [],
+    period: { from: null, to: null },   // 'YYYY-MM'
+    autoMinMonth: null,
+    autoMaxMonth: null,
+  };
+
+  // ---------- 유틸 ----------
+  function formatNumber(x, digits = 0) {
+    if (x === null || x === undefined || isNaN(x)) return "-";
+    const n = typeof x === "number" ? x : Number(x);
+    return n.toLocaleString("ko-KR", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  }
+
+  function roundValue(value, digits = 2) {
+    if (value === null || value === undefined || isNaN(value)) return null;
+    const n = typeof value === "number" ? value : Number(value);
+    if (!isFinite(n)) return null;
+    const factor = Math.pow(10, digits);
+    return Math.round(n * factor) / factor;
+  }
+
+  function excelSerialDateToJSDate(serial) {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const ms = serial * 24 * 60 * 60 * 1000;
+    return new Date(excelEpoch.getTime() + ms);
+  }
+
+  function parseDateFlexible(value) {
+    if (!value && value !== 0) return null;
+    if (value instanceof Date) return value;
+
+    if (typeof value === "number") {
+      return excelSerialDateToJSDate(value);
+    }
+
+    const str = String(value).trim();
+    if (!str) return null;
+
+    let m = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+      return new Date(y, mo, d);
+    }
+
+    m = str.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+      return new Date(y, mo, d);
+    }
+
+    // 기타 포맷은 Date 파서에 맡김
+    const dt = new Date(str);
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function parseBirthFromRRN(rrn) {
+    if (!rrn) return null;
+    const s = String(rrn).replace(/[^0-9]/g, "");
+    if (s.length < 7) return null;
+
+    const yy = Number(s.slice(0, 2));
+    const mm = Number(s.slice(2, 4)) - 1;
+    const dd = Number(s.slice(4, 6));
+    const flag = s[6];
+
+    let yearBase = null;
+    if (["1","2","5","6"].includes(flag)) {
+      yearBase = 1900;
+    } else if (["3","4","7","8"].includes(flag)) {
+      yearBase = 2000;
+    } else {
+      const tmpYear = 2000 + yy;
+      yearBase = tmpYear > new Date().getFullYear() ? 1900 : 2000;
+    }
+    const fullYear = yearBase + yy;
+    const birth = new Date(fullYear, mm, dd);
+    return isNaN(birth.getTime()) ? null : birth;
+  }
+
+  function calcAge(birth, refDate) {
+    if (!birth || !refDate) return null;
+    let age = refDate.getFullYear() - birth.getFullYear();
+    const m = refDate.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && refDate.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  }
+
+  function dateToMonthValue(dt) {
+    const y = dt.getFullYear();
+    const m = dt.getMonth() + 1;
+    return `${y}-${String(m).padStart(2, "0")}`;
+  }
+
+  function parseMonthValue(str) {
+    if (!str) return null;
+    const m = str.match(/^(\d{4})-(\d{2})$/);
+    if (!m) return null;
+    return { y: Number(m[1]), m: Number(m[2]) };
+  }
+
+  function compareMonthValue(a, b) {
+    const pa = parseMonthValue(a);
+    const pb = parseMonthValue(b);
+    if (!pa || !pb) return 0;
+    if (pa.y !== pb.y) return pa.y - pb.y;
+    return pa.m - pb.m;
+  }
+
+  // ---------- 원본 엑셀 → 표준 row 리스트 변환 ----------
+  function extractStandardRows(rows) {
+    /**
+     * 표준 row 구조:
+     * {
+     *   patientId: string,
+     *   visitDate: Date,
+     *   date: Date,
+     *   dose: number,
+     *   birth: Date|null,
+     *   rrn: string|null,
+     * }
+     */
+
+    const colMap = {
+      patientId: ["환자번호", "chartno", "차트번호", "환자No", "환자ID"],
+      visitDate: ["내원일", "방문일", "진료일", "일자", "date"],
+      dose: ["총투여량", "총투여", "투여량", "수량", "일투여량"],
+      birth: ["생년월일", "생일", "출생일", "dob"],
+      rrn: ["주민등록번호", "주민번호", "주민번호앞7자리", "주민"],
+    };
+
+    function findColIdx(headerRow, candidates) {
+      if (!headerRow) return -1;
+      const cols = headerRow.map(c => String(c || "").trim());
+      for (let i = 0; i < cols.length; i++) {
+        const name = cols[i];
+        if (!name) continue;
+        for (const cand of candidates) {
+          if (name === cand || name.includes(cand)) {
+            return i;
+          }
+        }
+      }
+      return -1;
+    }
+
+    if (!rows || rows.length === 0) {
+      return { rows: [], lastDate: null, warning: "데이터 없음" };
+    }
+
+    // ✅ 상단 30줄 안에서 헤더 줄을 찾아서 사용
+    let header = null;
+    let headerIndex = -1;
+    let idxPatient = -1, idxDate = -1, idxDose = -1, idxBirth = -1, idxRrn = -1;
+
+    const maxScan = Math.min(rows.length, 30);
+    for (let i = 0; i < maxScan; i++) {
+      const candidate = rows[i];
+      if (!candidate || candidate.length === 0) continue;
+
+      const p = findColIdx(candidate, colMap.patientId);
+      const d = findColIdx(candidate, colMap.visitDate);
+      const dos = findColIdx(candidate, colMap.dose);
+
+      if (p >= 0 && d >= 0 && dos >= 0) {
+        header = candidate;
+        headerIndex = i;
+        idxPatient = p;
+        idxDate = d;
+        idxDose = dos;
+        idxBirth = findColIdx(candidate, colMap.birth);
+        idxRrn = findColIdx(candidate, colMap.rrn);
+        break;
+      }
+    }
+
+    // 헤더를 못 찾으면 그냥 첫 줄 기준으로 (이 경우 경고 메시지 표시)
+    if (!header) {
+      header = rows[0];
+      headerIndex = 0;
+      idxPatient = findColIdx(header, colMap.patientId);
+      idxDate = findColIdx(header, colMap.visitDate);
+      idxDose = findColIdx(header, colMap.dose);
+      idxBirth = findColIdx(header, colMap.birth);
+      idxRrn = findColIdx(header, colMap.rrn);
+    }
+
+    const dataRows = rows.slice(headerIndex + 1);
+
+    let warning = null;
+    if (idxPatient < 0 || idxDate < 0 || idxDose < 0) {
+      warning = "필수 컬럼(환자번호, 내원일, 투여량)을 찾을 수 없습니다. 헤더 행 위치를 확인해 주세요.";
+    }
+
+    const resultRows = [];
+    let lastDate = null;
+
+    for (const row of dataRows) {
+      const patientIdRaw = idxPatient >= 0 ? row[idxPatient] : null;
+      const dateRaw = idxDate >= 0 ? row[idxDate] : null;
+      const doseRaw = idxDose >= 0 ? row[idxDose] : null;
+
+      if (patientIdRaw === null || patientIdRaw === undefined || patientIdRaw === "") continue;
+      const visitDate = parseDateFlexible(dateRaw);
+      if (!visitDate) continue;
+
+      const dose = Number(doseRaw || 0);
+      if (!dose || isNaN(dose)) continue;
+
+      const patientId = String(patientIdRaw).trim();
+      const date = visitDate;
+      if (!lastDate || date > lastDate) lastDate = date;
+
+      let birthDate = null;
+      if (idxBirth >= 0 && row[idxBirth]) {
+        birthDate = parseDateFlexible(row[idxBirth]);
+      }
+      let rrnVal = null;
+      if (!birthDate && idxRrn >= 0 && row[idxRrn]) {
+        rrnVal = String(row[idxRrn]);
+        birthDate = parseBirthFromRRN(rrnVal);
+      }
+
+      resultRows.push({
+        patientId,
+        visitDate,
+        date,
+        dose,
+        birth: birthDate,
+        rrn: rrnVal,
+      });
+    }
+
+    if (resultRows.length === 0 && !warning) {
+      warning = "필터링 결과 유효한 데이터가 없습니다.";
+    }
+
+    return { rows: resultRows, lastDate, warning };
+  }
+
+  // ---------- 통계 계산 ----------
+  function computeStats(rows) {
+    if (!rows || rows.length === 0) {
+      return {
+        totalVisits: 0,
+        totalDose: 0,
+        totalPatients: 0,
+        avgDosePerVisit: 0,
+        avgDosePerPatient: 0,
+        visitsPerPatient: 0,
+      };
+    }
+
+    let totalDose = 0;
+    const patientSet = new Set();
+
+    // visitKey: patientId + 날짜(yyyy-mm-dd)
+    function formatDateKey(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    const visitMap = new Map();   // key -> { patientId, date, dose }
+
+    for (const r of rows) {
+      if (!r.date || !r.patientId) continue;
+      totalDose += r.dose || 0;
+
+      const key = `${r.patientId}:${formatDateKey(r.date)}`;
+      patientSet.add(r.patientId);
+
+      const existing = visitMap.get(key) || { patientId: r.patientId, date: r.date, dose: 0 };
+      existing.dose += (r.dose || 0);
+      visitMap.set(key, existing);
+    }
+
+    const visitList = Array.from(visitMap.values());
+    const totalVisits = visitList.length;
+    const totalPatients = patientSet.size;
+
+    const visitsByPatient = {};
+    for (const v of visitList) {
+      if (!visitsByPatient[v.patientId]) visitsByPatient[v.patientId] = { totalDose: 0, count: 0 };
+      visitsByPatient[v.patientId].totalDose += v.dose;
+      visitsByPatient[v.patientId].count += 1;
+    }
+
+    let totalDosePerPatient = 0;
+    let totalVisitsForPatients = 0;
+    for (const pid in visitsByPatient) {
+      totalDosePerPatient += visitsByPatient[pid].totalDose;
+      totalVisitsForPatients += visitsByPatient[pid].count;
+    }
+
+    const avgDosePerVisit = totalVisits > 0 ? totalDose / totalVisits : 0;
+    const avgDosePerPatient = totalPatients > 0 ? totalDosePerPatient / totalPatients : 0;
+    const visitsPerPatient = totalPatients > 0 ? totalVisitsForPatients / totalPatients : 0;
+
+    return {
+      totalVisits,
+      totalDose,
+      totalPatients,
+      avgDosePerVisit,
+      avgDosePerPatient,
+      visitsPerPatient,
+    };
+  }
+
+  function filterByAgeGroup(rows, refDate, mode) {
+    // mode: "gte65" | "lt65"
+    if (!rows || rows.length === 0 || !refDate) return [];
+
+    return rows.filter(r => {
+      const birth = r.birth;
+      const rrn = r.rrn;
+      let birthDate = null;
+
+      if (birth instanceof Date && !isNaN(birth.getTime())) {
+        birthDate = birth;
+      } else if (rrn) {
+        birthDate = parseBirthFromRRN(rrn);
+      }
+
+      if (!birthDate) return false;
+      const age = calcAge(birthDate, refDate);
+      if (age === null) return false;
+
+      if (mode === "gte65") return age >= 65;
+      if (mode === "lt65") return age < 65;
+      return false;
+    });
+  }
+
+  function applyPeriodFilter(baseRows) {
+    if (!baseRows || baseRows.length === 0) return [];
+    const from = state.period.from;
+    const to = state.period.to;
+    if (!from && !to) return baseRows;
+
+    return baseRows.filter(r => {
+      if (!r.date) return false;
+      const mVal = dateToMonthValue(r.date);
+      if (from && compareMonthValue(mVal, from) < 0) return false;
+      if (to && compareMonthValue(mVal, to) > 0) return false;
+      return true;
+    });
+  }
+
+  // ---------- DOM 렌더링 ----------
+  function renderFileList(containerId, fileList) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (!fileList || fileList.length === 0) {
+      el.textContent = "";
+      return;
+    }
+    const names = Array.from(fileList).map(f => f.name);
+    el.textContent = names.join(", ");
+  }
+
+  function renderSummaryPill(containerId, info) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!info || !info.rows || info.rows.length === 0) {
+      el.textContent = "대기 중";
+      return;
+    }
+
+    const cnt = info.rows.length;
+    const lastDate = info.lastDate ? dateToMonthValue(info.lastDate) : "-";
+    const warn = info.warning || null;
+
+    let html = `<span>행 수: ${formatNumber(cnt)}</span>`;
+    html += `<span>마지막 내원월: ${lastDate}</span>`;
+    if (warn) {
+      html += `<span class="warn">※ ${warn}</span>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function buildOverallTitle(fromMonth, toMonth) {
+    if (!fromMonth && !toMonth) return "전체 기간";
+    if (fromMonth && !toMonth) return `${fromMonth} 이후 전체`;
+    if (!fromMonth && toMonth) return `${toMonth} 이전 전체`;
+    if (fromMonth === toMonth) return `${fromMonth} 1개월`;
+    return `${fromMonth} ~ ${toMonth}`;
+  }
+
+  function renderTables() {
+    const overallWrapper = document.getElementById("table-overall-wrapper");
+    const ageWrapper = document.getElementById("table-age-wrapper");
+
+    const groups = [
+      { key: "nhis", label: "국민건강보험" },
+      { key: "medicaid", label: "보호(의료급여)" },
+      { key: "auto", label: "자보" },
+    ];
+
+    const rowsByGroup = {};
+    let allRows = [];
+    let periodLastDate = null;
+
+    for (const g of groups) {
+      const infoKey = "__info_" + g.key;
+      const info = state[infoKey];
+      const baseRows = info && info.rows ? info.rows : [];
+      const filtered = applyPeriodFilter(baseRows);
+      rowsByGroup[g.key] = filtered;
+      allRows = allRows.concat(filtered);
+
+      for (const r of filtered) {
+        if (!periodLastDate || r.date > periodLastDate) periodLastDate = r.date;
+      }
+    }
+
+    const periodTitle = buildOverallTitle(state.period.from, state.period.to);
+
+    // ① 전체 요약
+    if (!allRows || allRows.length === 0) {
+      overallWrapper.innerHTML = `
+        <div class="note">선택된 기간에 해당하는 데이터가 없습니다. 기간을 다시 선택하거나 엑셀을 업로드해 주세요.</div>
+      `;
+    } else {
+      const rowsHtml = [];
+
+      const statsByGroup = {};
+      for (const g of groups) {
+        const stats = computeStats(rowsByGroup[g.key]);
+        statsByGroup[g.key] = stats;
+        rowsHtml.push(`
+          <tr>
+            <td>${g.label}</td>
+            <td>${formatNumber(stats.totalVisits)}</td>
+            <td>${formatNumber(stats.totalDose, 2)}</td>
+            <td class="cell-strong">${formatNumber(stats.avgDosePerVisit, 2)}</td>
+            <td>${formatNumber(stats.totalPatients)}</td>
+            <td class="cell-strong">${formatNumber(stats.avgDosePerPatient, 2)}</td>
+            <td class="cell-strong">${formatNumber(stats.visitsPerPatient, 2)}</td>
+          </tr>
+        `);
+      }
+
+      const statsAll = computeStats(allRows);
+      const totalRow = `
+        <tr class="cell-total">
+          <td>전체</td>
+          <td>${formatNumber(statsAll.totalVisits)}</td>
+          <td>${formatNumber(statsAll.totalDose, 2)}</td>
+          <td class="cell-strong">${formatNumber(statsAll.avgDosePerVisit, 2)}</td>
+          <td>${formatNumber(statsAll.totalPatients)}</td>
+          <td class="cell-strong">${formatNumber(statsAll.avgDosePerPatient, 2)}</td>
+          <td class="cell-strong">${formatNumber(statsAll.visitsPerPatient, 2)}</td>
+        </tr>
+      `;
+
+      const healthPlusMedicaidRows = rowsByGroup["nhis"].concat(rowsByGroup["medicaid"]);
+      const hpStats = computeStats(healthPlusMedicaidRows);
+      const hpRow = `
+        <tr>
+          <td>건보+보호</td>
+          <td>${formatNumber(hpStats.totalVisits)}</td>
+          <td>${formatNumber(hpStats.totalDose, 2)}</td>
+          <td class="cell-strong">${formatNumber(hpStats.avgDosePerVisit, 2)}</td>
+          <td>${formatNumber(hpStats.totalPatients)}</td>
+          <td class="cell-strong">${formatNumber(hpStats.avgDosePerPatient, 2)}</td>
+          <td class="cell-strong">${formatNumber(hpStats.visitsPerPatient, 2)}</td>
+        </tr>
+      `;
+
+      overallWrapper.innerHTML = `
+        <div class="note" style="margin-bottom:6px;">기간: ${periodTitle}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>신경차단술 / 유형</th>
+              <th>총 방문수</th>
+              <th>총 투여량</th>
+              <th>건당 횟수 (평균)</th>
+              <th>수신자수</th>
+              <th>수신자당 투여량 (평균)</th>
+              <th>수신자당 방문수 (평균)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${totalRow}
+            ${rowsHtml.join("")}
+            ${hpRow}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // ② 65세 이상 / 미만 비율 및 건당
+    if (!allRows || allRows.length === 0 || !periodLastDate) {
+      ageWrapper.innerHTML = `
+        <div class="note">선택된 기간의 데이터 또는 주민등록번호/생년월일이 없어 연령 통계를 계산할 수 없습니다.</div>
+      `;
+    } else {
+      const ageRows = [];
+
+      function buildAgeRow(label, rowsAll) {
+        const statsAll = computeStats(rowsAll);
+        if (statsAll.totalPatients === 0) return "";
+
+        const rows65p = filterByAgeGroup(rowsAll, periodLastDate, "gte65");
+        const rows65m = filterByAgeGroup(rowsAll, periodLastDate, "lt65");
+        const stats65p = computeStats(rows65p);
+        const stats65m = computeStats(rows65m);
+
+        const share65p = statsAll.totalPatients > 0
+          ? (stats65p.totalPatients / statsAll.totalPatients) * 100
+          : 0;
+        const share65m = statsAll.totalPatients > 0
+          ? (stats65m.totalPatients / statsAll.totalPatients) * 100
+          : 0;
+
+        return `
+          <tr>
+            <td>${label}</td>
+            <td>${formatNumber(share65p, 2)}%</td>
+            <td>${formatNumber(share65m, 2)}%</td>
+            <td class="cell-strong">${formatNumber(stats65p.avgDosePerVisit, 2)}</td>
+            <td class="cell-strong">${formatNumber(stats65m.avgDosePerVisit, 2)}</td>
+          </tr>
+        `;
+      }
+
+      const rowsNhis = rowsByGroup["nhis"];
+      const rowsMedicaid = rowsByGroup["medicaid"];
+      const rowsAuto = rowsByGroup["auto"];
+      const rowsAll = allRows;
+      const rowsHp = rowsNhis.concat(rowsMedicaid);
+
+      const sections = [
+        { label: "국민건강보험", rows: rowsNhis },
+        { label: "보호(의료급여)", rows: rowsMedicaid },
+        { label: "자보", rows: rowsAuto },
+        { label: "전체", rows: rowsAll },
+        { label: "건보+보호", rows: rowsHp },
+      ];
+
+      for (const s of sections) {
+        const rowHtml = buildAgeRow(s.label, s.rows);
+        if (rowHtml) ageRows.push(rowHtml);
+      }
+
+      ageWrapper.innerHTML = `
+        <div class="note" style="margin-bottom:6px;">기간: ${periodTitle}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>신경차단술 / 유형</th>
+              <th>65세이상 비율</th>
+              <th>65세미만 비율</th>
+              <th>65세이상 건당 횟수</th>
+              <th>65세미만 건당 횟수</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${ageRows.join("")}
+          </tbody>
+        </table>
+      `;
+    }
+  }
+
+  function updateAutoPeriodFromData() {
+    let minDate = null;
+    let maxDate = null;
+    ["__info_nhis", "__info_medicaid", "__info_auto"].forEach(key => {
+      const info = state[key];
+      if (!info || !info.rows) return;
+      for (const r of info.rows) {
+        if (!minDate || r.date < minDate) minDate = r.date;
+        if (!maxDate || r.date > maxDate) maxDate = r.date;
+      }
+    });
+
+    state.autoMinMonth = minDate ? dateToMonthValue(minDate) : null;
+    state.autoMaxMonth = maxDate ? dateToMonthValue(maxDate) : null;
+
+    const fromInput = document.getElementById("period-from");
+    const toInput = document.getElementById("period-to");
+
+    if (!state.period.from && !state.period.to) {
+      state.period.from = state.autoMinMonth;
+      state.period.to = state.autoMaxMonth;
+      if (state.autoMinMonth) fromInput.value = state.autoMinMonth;
+      if (state.autoMaxMonth) toInput.value = state.autoMaxMonth;
+    }
+  }
+
+  function handlePeriodChange() {
+    const fromVal = document.getElementById("period-from").value || null;
+    const toVal = document.getElementById("period-to").value || null;
+
+    if (fromVal && toVal && compareMonthValue(fromVal, toVal) > 0) {
+      // 앞뒤가 뒤바뀐 경우 자동 교환
+      state.period.from = toVal;
+      state.period.to = fromVal;
+      document.getElementById("period-from").value = toVal;
+      document.getElementById("period-to").value = fromVal;
+    } else {
+      state.period.from = fromVal;
+      state.period.to = toVal;
+    }
+    renderTables();
+  }
+
+  function handlePeriodReset() {
+    state.period.from = state.autoMinMonth;
+    state.period.to = state.autoMaxMonth;
+    const fromInput = document.getElementById("period-from");
+    const toInput = document.getElementById("period-to");
+    if (state.autoMinMonth) fromInput.value = state.autoMinMonth;
+    if (state.autoMaxMonth) toInput.value = state.autoMaxMonth;
+    renderTables();
+  }
+
+  // ---------- 파일 업로드 핸들러 ----------
+  async function handleFileInput(event, groupKey) {
+    const files = event.target.files;
+    renderFileList("file-list-" + groupKey, files);
+
+    if (!files || files.length === 0) {
+      state[groupKey] = [];
+      state["__info_" + groupKey] = { rows: [], lastDate: null, warning: null };
+      renderSummaryPill("summary-" + groupKey, { rows: [], lastDate: null, warning: null });
+      updateAutoPeriodFromData();
+      renderTables();
+      return;
+    }
+
+    const allRows = [];
+    let warning = null;
+
+    for (const file of files) {
+      try {
+        const rows = await parseExcelFile(file);
+        allRows.push(...rows);
+      } catch (err) {
+        console.error("엑셀 파싱 오류:", err);
+        warning = (warning ?? "") + ` [${file.name}] 파싱 오류`;
+      }
+    }
+
+    const info = extractStandardRows(allRows);
+    if (warning) {
+      info.warning = (info.warning ? info.warning + " / " : "") + warning;
+    }
+
+    state[groupKey] = allRows;
+    state["__info_" + groupKey] = info;
+
+    renderSummaryPill("summary-" + groupKey, info);
+    updateAutoPeriodFromData();
+    renderTables();
+  }
+
+  // ---------- 엑셀 파서 ----------
+  async function parseExcelFile(file) {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array" });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    return json;
+  }
+
+  // ---------- 엑셀 다운로드 ----------
+  function exportToExcel() {
+    const groups = [
+      { key: "nhis", label: "국민건강보험" },
+      { key: "medicaid", label: "보호(의료급여)" },
+      { key: "auto", label: "자보" },
+    ];
+
+    const rowsByGroup = {};
+    let allRows = [];
+    let periodLastDate = null;
+
+    for (const g of groups) {
+      const infoKey = "__info_" + g.key;
+      const info = state[infoKey];
+      const baseRows = info && info.rows ? info.rows : [];
+      const filtered = applyPeriodFilter(baseRows);
+      rowsByGroup[g.key] = filtered;
+      allRows = allRows.concat(filtered);
+
+      for (const r of filtered) {
+        if (!periodLastDate || r.date > periodLastDate) periodLastDate = r.date;
+      }
+    }
+
+    if (!allRows || allRows.length === 0) {
+      alert("선택된 기간에 해당하는 데이터가 없어 엑셀로 내보낼 수 없습니다.\n엑셀 업로드 및 기간 선택을 확인해 주세요.");
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const periodTitle = buildOverallTitle(state.period.from, state.period.to);
+
+    // ① 전체 요약 시트
+    const sheetOverall = [];
+    sheetOverall.push([periodTitle]);
+    sheetOverall.push([]);
+    sheetOverall.push([
+      "신경차단술 / 유형",
+      "총 방문수",
+      "총 투여량",
+      "건당 횟수(평균)",
+      "수신자수",
+      "수신자당 투여량(평균)",
+      "수신자당 방문수(평균)",
+    ]);
+
+    const statsByGroup = {};
+    for (const g of groups) {
+      const stats = computeStats(rowsByGroup[g.key]);
+      statsByGroup[g.key] = stats;
+      sheetOverall.push([
+        g.label,
+        stats.totalVisits,
+        roundValue(stats.totalDose, 2),
+        roundValue(stats.avgDosePerVisit, 2),
+        stats.totalPatients,
+        roundValue(stats.avgDosePerPatient, 2),
+        roundValue(stats.visitsPerPatient, 2),
+      ]);
+    }
+
+    const statsAll = computeStats(allRows);
+    sheetOverall.push([
+      "전체",
+      statsAll.totalVisits,
+      roundValue(statsAll.totalDose, 2),
+      roundValue(statsAll.avgDosePerVisit, 2),
+      statsAll.totalPatients,
+      roundValue(statsAll.avgDosePerPatient, 2),
+      roundValue(statsAll.visitsPerPatient, 2),
+    ]);
+
+    const healthPlusMedicaidRows = rowsByGroup["nhis"].concat(rowsByGroup["medicaid"]);
+    const hpStats = computeStats(healthPlusMedicaidRows);
+    sheetOverall.push([
+      "건보+보호",
+      hpStats.totalVisits,
+      roundValue(hpStats.totalDose, 2),
+      roundValue(hpStats.avgDosePerVisit, 2),
+      hpStats.totalPatients,
+      roundValue(hpStats.avgDosePerPatient, 2),
+      roundValue(hpStats.visitsPerPatient, 2),
+    ]);
+
+    const wsOverall = XLSX.utils.aoa_to_sheet(sheetOverall);
+    XLSX.utils.book_append_sheet(wb, wsOverall, "전체요약");
+
+    // ② 연령별 시트
+    if (periodLastDate) {
+      const sheetAge = [];
+      sheetAge.push([periodTitle]);
+      sheetAge.push([]);
+      sheetAge.push([
+        "신경차단술 / 유형",
+        "65세이상 비율(%)",
+        "65세미만 비율(%)",
+        "65세이상 건당 횟수",
+        "65세미만 건당 횟수",
+      ]);
+
+      function pushAgeRow(label, rowsAll) {
+        const statsAll = computeStats(rowsAll);
+        if (statsAll.totalPatients === 0) return;
+
+        const rows65p = filterByAgeGroup(rowsAll, periodLastDate, "gte65");
+        const rows65m = filterByAgeGroup(rowsAll, periodLastDate, "lt65");
+        const stats65p = computeStats(rows65p);
+        const stats65m = computeStats(rows65m);
+
+        const share65p = statsAll.totalPatients > 0
+          ? (stats65p.totalPatients / statsAll.totalPatients) * 100
+          : 0;
+        const share65m = statsAll.totalPatients > 0
+          ? (stats65m.totalPatients / statsAll.totalPatients) * 100
+          : 0;
+
+        sheetAge.push([
+          label,
+          roundValue(share65p, 2),
+          roundValue(share65m, 2),
+          roundValue(stats65p.avgDosePerVisit, 2),
+          roundValue(stats65m.avgDosePerVisit, 2),
+        ]);
+      }
+
+      for (const g of groups) {
+        pushAgeRow(g.label, rowsByGroup[g.key]);
+      }
+      pushAgeRow("전체", allRows);
+      pushAgeRow("건보+보호", healthPlusMedicaidRows);
+
+      const wsAge = XLSX.utils.aoa_to_sheet(sheetAge);
+      XLSX.utils.book_append_sheet(wb, wsAge, "연령별");
+    }
+
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const filename = `신경차단술_요약통계_${yyyy}${mm}${dd}.xlsx`;
+
+    XLSX.writeFile(wb, filename);
+  }
+
+  // ---------- 전체 초기화 ----------
+  function handleResetAll() {
+    state.nhis = [];
+    state.medicaid = [];
+    state.auto = [];
+    state.period = { from: null, to: null };
+    state.autoMinMonth = null;
+    state.autoMaxMonth = null;
+
+    ["file-nhis", "file-medicaid", "file-auto"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+
+    ["file-list-nhis", "file-list-medicaid", "file-list-auto"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = "";
+    });
+
+    ["summary-nhis", "summary-medicaid", "summary-auto"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = "대기 중";
+    });
+
+    const fromInput = document.getElementById("period-from");
+    const toInput = document.getElementById("period-to");
+    if (fromInput) fromInput.value = "";
+    if (toInput) toInput.value = "";
+
+    renderTables();
+  }
+
+  // ---------- 초기 바인딩 ----------
+  document.getElementById("btn-back").addEventListener("click", () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "index.html";
+    }
+  });
+  document.getElementById("btn-reset-all").addEventListener("click", handleResetAll);
+  document.getElementById("btn-export-excel").addEventListener("click", exportToExcel);
+
+  document.getElementById("file-nhis").addEventListener("change", e => handleFileInput(e, "nhis"));
+  document.getElementById("file-medicaid").addEventListener("change", e => handleFileInput(e, "medicaid"));
+  document.getElementById("file-auto").addEventListener("change", e => handleFileInput(e, "auto"));
+
+  document.getElementById("period-from").addEventListener("change", handlePeriodChange);
+  document.getElementById("period-to").addEventListener("change", handlePeriodChange);
+  document.getElementById("period-reset").addEventListener("click", handlePeriodReset);
+
+  renderTables();
+  </script>
+</body>
+</html>
