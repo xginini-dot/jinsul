@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JINSUL 근무일지 리스트업</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy:#111827;
+  --deep:#0b1220;
+  --gold:#b9a58a;
+  --gold2:#d7c8ae;
+  --bg:#f4f1eb;
+  --panel:#ffffff;
+  --line:#e6ded2;
+  --text:#1f2937;
+  --muted:#6b7280;
+  --red:#b91c1c;
+  --blue:#2f3a4a;
+  --shadow:0 18px 45px rgba(17,24,39,.10);
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(215,200,174,.42), transparent 28%),
+    linear-gradient(180deg,#fbfaf8 0%, var(--bg) 100%);
+  color:var(--text);
+}
+.wrap { max-width:1180px; margin:0 auto; padding:30px 18px 46px; }
+.hero {
+  position:relative;
+  overflow:hidden;
+  background:
+    linear-gradient(135deg, rgba(11,18,32,.98), rgba(47,58,74,.96)),
+    linear-gradient(135deg,#0f172a,#303f91);
+  color:white;
+  border-radius:28px;
+  padding:30px 34px;
+  box-shadow:var(--shadow);
+  border:1px solid rgba(215,200,174,.35);
+}
+.hero::before {
+  content:"";
+  position:absolute;
+  inset:-80px -80px auto auto;
+  width:260px;
+  height:260px;
+  border-radius:50%;
+  background:rgba(185,165,138,.16);
+}
+.hero::after {
+  content:"";
+  position:absolute;
+  left:34px;
+  right:34px;
+  bottom:0;
+  height:4px;
+  background:linear-gradient(90deg, transparent, var(--gold), var(--gold2), transparent);
+  opacity:.9;
+}
+.brand-row { position:relative; display:flex; align-items:center; justify-content:space-between; gap:22px; z-index:1; }
+.brand-copy { min-width:0; }
+.brand-mark { display:flex; align-items:center; gap:16px; margin-bottom:18px; }
+.logo-box {
+  width:84px;
+  height:84px;
+  border-radius:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 12px 28px rgba(0,0,0,.22);
+  padding:8px;
+  flex:0 0 auto;
+  overflow:hidden;
+}
+.logo-box img {
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  display:block;
+}
+.company { line-height:1.15; }
+.company .en { font-size:24px; letter-spacing:.38em; font-weight:900; color:#f7f1e8; }
+.company .ko { margin-top:6px; font-size:13px; letter-spacing:.12em; color:rgba(247,241,232,.78); font-weight:700; }
+.hero h1 { margin:0 0 9px; font-size:32px; letter-spacing:-.045em; }
+.hero p { margin:0; opacity:.88; line-height:1.62; max-width:760px; }
+.hero-badge {
+  align-self:stretch;
+  min-width:160px;
+  border:1px solid rgba(215,200,174,.38);
+  background:rgba(255,255,255,.06);
+  border-radius:22px;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:right;
+  color:#eadfcc;
+  font-weight:800;
+}
+.hero-badge span { display:block; font-size:12px; color:rgba(234,223,204,.72); margin-bottom:8px; }
+.panel { margin-top:18px; background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:22px; padding:20px; box-shadow:0 10px 28px rgba(17,24,39,.07); backdrop-filter:blur(8px); }
+.controls { display:grid; grid-template-columns:1.4fr 140px 140px 170px 1.4fr; gap:12px; align-items:end; }
+label { display:block; font-weight:900; font-size:13px; color:#2f3a4a; margin-bottom:7px; }
+input, select, button { width:100%; height:44px; border:1px solid #d8d0c4; border-radius:12px; padding:0 13px; font-size:14px; background:white; color:var(--text); }
+input:focus, select:focus, textarea:focus { outline:2px solid rgba(185,165,138,.35); border-color:var(--gold); }
+button { cursor:pointer; border:0; color:white; background:linear-gradient(135deg,#1f2937,#4b5563); font-weight:900; box-shadow:0 8px 18px rgba(31,41,55,.14); }
+button:hover { filter:brightness(1.04); transform:translateY(-1px); }
+button.secondary { background:linear-gradient(135deg,#7c6b55,#b9a58a); color:#fff; }
+button.light { background:#eee8de; color:#1f2937; box-shadow:none; border:1px solid #ded4c6; }
+.btns { display:grid; grid-template-columns:repeat(3, minmax(120px,1fr)); gap:10px; margin-top:13px; }
+.summary { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; margin-top:17px; }
+.card { background:linear-gradient(180deg,#ffffff,#faf8f5); border:1px solid var(--line); border-radius:16px; padding:15px; }
+.card .k { color:var(--muted); font-size:12px; font-weight:900; }
+.card .v { margin-top:5px; font-size:23px; font-weight:950; color:#2f3a4a; letter-spacing:-.02em; }
+.table-wrap { overflow:auto; border:1px solid var(--line); border-radius:18px; margin-top:16px; background:white; max-height:72vh; box-shadow:inset 0 1px 0 rgba(255,255,255,.8); }
+table { width:100%; border-collapse:separate; border-spacing:0; min-width:760px; }
+th, td { padding:12px 13px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+th { position:sticky; top:0; background:linear-gradient(180deg,#f3eee6,#e9dfd1); color:#2f3a4a; font-size:13px; z-index:1; font-weight:950; }
+tr:nth-child(even) td { background:#fdfbf8; }
+tr:hover td { background:#f7f1e8; }
+tr:last-child td { border-bottom:0; }
+.day { font-weight:950; color:#111827; white-space:nowrap; }
+.weekend { color:var(--red); }
+.badge { display:inline-flex; align-items:center; min-height:26px; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:900; background:#efe8dd; color:#604b34; border:1px solid #e3d5c2; }
+.badge.off { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.badge.blank { background:#f3f4f6; color:#6b7280; border-color:#e5e7eb; }
+.work { white-space:pre-wrap; line-height:1.48; }
+.notice { color:var(--muted); font-size:13px; margin-top:10px; line-height:1.58; }
+.convert-box { margin-top:15px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#fff,#fbf8f3); padding:13px; }
+.convert-head { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.convert-head strong { color:#2f3a4a; }
+.convert-tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.convert-tools label { margin:0; display:flex; align-items:center; gap:6px; font-size:13px; }
+.convert-tools input[type=checkbox] { width:auto; height:auto; accent-color:#7c6b55; }
+#mappingArea { width:100%; min-height:92px; margin-top:10px; border:1px solid #d8d0c4; border-radius:12px; padding:10px 12px; font-size:13px; line-height:1.5; resize:vertical; display:none; }
+.mini-btn { width:auto; height:34px; padding:0 12px; border-radius:10px; font-size:12px; }
+@media (max-width:940px) { .controls{grid-template-columns:1fr 1fr;} .summary{grid-template-columns:1fr 1fr;} .btns{grid-template-columns:1fr;} .brand-row{display:block;} .hero-badge{text-align:left;margin-top:18px;} .company .en{letter-spacing:.25em;} }
+@media (max-width:560px) { .wrap{padding:18px 12px 34px;} .hero{padding:24px 20px;border-radius:22px;} .brand-mark{align-items:flex-start;} .logo-box{width:68px;height:68px;border-radius:20px;} .hero h1{font-size:26px;} .company .en{font-size:19px;} }
+@media print { body{background:white;} .hero,.controls,.btns,.notice,input{display:none!important;} .panel{box-shadow:none;border:0;padding:0;} .wrap{max-width:none;padding:0;} th{position:static;} .table-wrap{max-height:none; overflow:visible;} }
+
+.top-actions{position:fixed;right:24px;top:18px;z-index:50;display:flex;gap:10px}
+.util-btn{width:auto;height:40px;padding:0 18px;border-radius:14px;background:rgba(255,255,255,.92);color:#111827;border:1px solid #ded4c6;box-shadow:0 8px 22px rgba(17,24,39,.10);font-weight:900}
+.util-btn:hover{transform:translateY(-1px)}
+body.dark-mode{--bg:#0f172a;--panel:#111827;--line:#334155;--text:#e5e7eb;--muted:#94a3b8;background:linear-gradient(180deg,#020617 0%,#0f172a 100%);color:var(--text)}
+body.dark-mode .panel,body.dark-mode .card,body.dark-mode .convert-box,body.dark-mode .table-wrap{background:#111827;border-color:#334155}
+body.dark-mode input,body.dark-mode select,body.dark-mode textarea{background:#0b1220;color:#e5e7eb;border-color:#475569}
+body.dark-mode th{background:linear-gradient(180deg,#1f2937,#111827);color:#e5e7eb}
+body.dark-mode td{border-color:#334155}
+body.dark-mode tr:nth-child(even) td{background:#0f172a}
+body.dark-mode tr:hover td{background:#1e293b}
+body.dark-mode .day{color:#f8fafc}
+body.dark-mode .util-btn{background:#111827;color:#e5e7eb;border-color:#475569}
+@media(max-width:640px){.top-actions{position:static;justify-content:flex-end;padding:12px 12px 0}.util-btn{height:38px;padding:0 14px}}
+
+</style>
+</head>
+<body>
+<div class="top-actions"><button type="button" class="util-btn" onclick="history.back()">← 뒤로가기</button><button type="button" class="util-btn" onclick="toggleTheme()">다크모드</button></div>
+<div class="wrap">
+  <section class="hero">
+    <div class="brand-row">
+      <div class="brand-copy">
+        <div class="brand-mark">
+          <div class="logo-box"><img id="jinsulLogo" src="https://raw.githubusercontent.com/xginini-dot/jinsul/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png" alt="JINSUL 로고" loading="eager"></div>
+          <div class="company">
+            <div class="en">JINSUL</div>
+            <div class="ko">경험과 가치를 현실화 하는 컨설팅</div>
+          </div>
+        </div>
+        <h1>근무일지 리스트업</h1>
+        <p>시작 연도·월, 조회기간, 근무자를 선택하면 기간 내 날짜별 근무내용을 빠짐없이 표기합니다. 휴무와 빈칸도 날짜별로 표시됩니다.</p>
+      </div>
+      <div class="hero-badge"><span>WORK LOG</span>Schedule List-up</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="controls">
+      <div>
+        <label>엑셀 파일 업로드</label>
+        <input id="fileInput" type="file" accept=".xlsx,.xls" />
+      </div>
+      <div>
+        <label>년도</label>
+        <select id="yearSelect"></select>
+      </div>
+      <div>
+        <label>시작 월</label>
+        <select id="monthSelect"></select>
+      </div>
+      <div>
+        <label>조회기간</label>
+        <select id="periodSelect">
+          <option value="1">1개월</option><option value="2">2개월</option><option value="3">3개월</option><option value="4">4개월</option><option value="5">5개월</option><option value="6">6개월</option><option value="7">7개월</option><option value="8">8개월</option><option value="9">9개월</option><option value="10">10개월</option><option value="11">11개월</option><option value="12">12개월</option>
+        </select>
+      </div>
+      <div>
+        <label>근무자</label>
+        <select id="workerSelect"></select>
+      </div>
+    </div>
+    <div class="btns">
+      <button onclick="renderList()">조회하기</button>
+      <button class="secondary" onclick="copyTable()">복사용 표 복사</button>
+      <button class="light" onclick="window.print()">인쇄 / PDF 저장</button>
+    </div>
+
+    <div class="convert-box">
+      <div class="convert-head">
+        <strong>근무내용 변환 보기</strong>
+        <div class="convert-tools">
+          <label><input id="convertToggle" type="checkbox" onchange="renderList()"> 병원명으로 변환</label>
+          <button class="light mini-btn" type="button" onclick="toggleMappingArea()">변환표 열기/닫기</button>
+          <button class="secondary mini-btn" type="button" onclick="applyMappingText()">변환표 적용</button>
+        </div>
+      </div>
+      <textarea id="mappingArea" spellcheck="false"></textarea>
+      <div class="notice" style="margin-top:8px;">예: 지축(관리) → 지축바로척365의원. 변환표는 <b>약칭=정식명</b> 형식으로 수정 후 적용할 수 있습니다.</div>
+    </div>
+    <div class="notice" id="status">엑셀 파일을 업로드하면 월별 스케줄을 자동 인식합니다. 공백 날짜는 휴무로 산정됩니다.</div>
+
+    <div class="summary" id="summary"></div>
+    <div class="table-wrap">
+      <table id="resultTable">
+        <thead><tr><th style="width:115px;">날짜</th><th style="width:70px;">요일</th><th style="width:120px;">근무자</th><th>근무내용</th><th style="width:90px;">구분</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<script>
+let scheduleData = [];
+// 저장된 스케줄 데이터는 포함하지 않습니다. 엑셀 파일 업로드 시에만 데이터가 생성됩니다.
+const offRegex = /(휴무|연차|미출근|대체\s*휴무|대체휴무|휴가)/;
+const weekdays = ['일','월','화','수','목','금','토'];
+
+function pad(n) { return String(n).padStart(2,'0'); }
+function ymd(y,m,d) { return `${y}-${pad(m)}-${pad(d)}`; }
+function daysInMonth(y,m) { return new Date(y, m, 0).getDate(); }
+function parseYMD(ds) { const [y,m,d] = String(ds).split('-').map(Number); return {y,m,d}; }
+function weekdayOf(y,m,d) { return weekdays[new Date(y, m-1, d).getDay()]; }
+function isWeekendYMD(y,m,d) { const w = new Date(y, m-1, d).getDay(); return w===0 || w===6; }
+function addMonths(y,m,offset) { const total = y*12 + (m-1) + offset; return {year:Math.floor(total/12), month:(total%12)+1}; }
+function monthKey(y,m) { return y*100 + m; }
+function selectedRangeMonths() {
+  const y=Number(document.getElementById('yearSelect').value), m=Number(document.getElementById('monthSelect').value);
+  const n=Number(document.getElementById('periodSelect')?.value || 1);
+  const arr=[];
+  for(let i=0;i<n;i++) arr.push(addMonths(y,m,i));
+  return arr;
+}
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function normalizeText(v) { if (v === undefined || v === null) return ''; return String(v).trim(); }
+function dateToYMD(v) {
+  if (v instanceof Date && !isNaN(v)) {
+    // 브라우저/엑셀 날짜 변환에서 하루가 밀리는 현상을 줄이기 위해 UTC와 로컬 중 더 안정적인 값을 사용합니다.
+    const ly = v.getFullYear(), lm = v.getMonth()+1, ld = v.getDate();
+    return `${ly}-${pad(lm)}-${pad(ld)}`;
+  }
+  if (typeof v === 'number' && window.XLSX) {
+    const d = XLSX.SSF.parse_date_code(v); if (d) return `${d.y}-${pad(d.m)}-${pad(d.d)}`;
+  }
+  const s = normalizeText(v);
+  let m = s.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/); if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  return '';
+}
+function dateFromDisplayText(v, sy) {
+  const s = normalizeText(v).replace(/\s+/g, ' ');
+  let m = s.match(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if (m) return `${sy}-${pad(m[1])}-${pad(m[2])}`;
+  m = s.match(/^(\d{1,2})[.\/](\d{1,2})(?:\D|$)/);
+  if (m) return `${sy}-${pad(m[1])}-${pad(m[2])}`;
+  return '';
+}
+function headerDateYMD(rawValue, displayValue, sy) {
+  // 엑셀 셀의 실제 날짜값보다 화면에 보이는 '1월 1일 목요일' 같은 문구를 우선합니다.
+  // 이 방식으로 1월 1일 공백이 1월 2일 근무지로 당겨지는 문제를 방지합니다.
+  return dateFromDisplayText(displayValue, sy) || dateFromDisplayText(rawValue, sy) || dateToYMD(rawValue) || dateToYMD(displayValue);
+}
+function isDateRow(row) { let cnt=0; for(let c=2;c<=8;c++) if(dateToYMD(row[c])) cnt++; return cnt>=3; }
+function sheetYearMonth(name) { const m=String(name).trim().match(/^(\d{2})년\s*(\d{1,2})월$/); return m ? [2000+Number(m[1]), Number(m[2])] : null; }
+
+
+function cellObj(ws, r, c) {
+  return ws[XLSX.utils.encode_cell({r:r, c:c})] || null;
+}
+function cellText(ws, r, c) {
+  const cell = cellObj(ws, r, c);
+  if (!cell) return '';
+  if (cell.w !== undefined && cell.w !== null) return String(cell.w).trim();
+  if (cell.v !== undefined && cell.v !== null) return String(cell.v).trim();
+  return '';
+}
+function cellRaw(ws, r, c) {
+  const cell = cellObj(ws, r, c);
+  return cell ? cell.v : '';
+}
+
+function excelSerialToYMD(n) {
+  if (typeof n !== 'number' || !isFinite(n)) return '';
+  const d = XLSX.SSF.parse_date_code(n);
+  if (!d) return '';
+  return `${d.y}-${pad(d.m)}-${pad(d.d)}`;
+}
+function addDaysYMD(ds, delta) {
+  const p = parseYMD(ds);
+  const dt = new Date(p.y, p.m - 1, p.d + delta);
+  return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`;
+}
+function parseCellDate(ws, r, c, sy, sm, forceDateRow=false) {
+  const cell = cellObj(ws, r, c);
+  if (!cell) return '';
+  const raw = cell.v;
+  const shown = cell.w || raw;
+
+  if (raw instanceof Date && !isNaN(raw)) {
+    return `${raw.getFullYear()}-${pad(raw.getMonth()+1)}-${pad(raw.getDate())}`;
+  }
+
+  if (typeof raw === 'number') {
+    const w = String(cell.w || '');
+    const z = String(cell.z || '');
+    const looksDate = raw > 25000 || /[ymd년월일]/i.test(z) || /[\/\.\-년월일]/.test(w);
+    if (looksDate) {
+      const ds = excelSerialToYMD(raw);
+      if (ds) return ds;
+    }
+    if (forceDateRow && raw >= 1 && raw <= 31 && sy && sm) {
+      return `${sy}-${pad(sm)}-${pad(raw)}`;
+    }
+  }
+
+  const s = normalizeText(shown).replace(/\s+/g, ' ');
+  let m = s.match(/(20\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if (m) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  m = s.match(/(\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if (m) return `${2000+Number(m[1])}-${pad(m[2])}-${pad(m[3])}`;
+  m = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+  if (m) {
+    let yy = sy;
+    const mm = Number(m[1]);
+    if (sm === 1 && mm === 12) yy = sy - 1;
+    if (sm === 12 && mm === 1) yy = sy + 1;
+    return `${yy}-${pad(mm)}-${pad(m[2])}`;
+  }
+  m = s.match(/^(\d{1,2})[.\/](\d{1,2})(?:\D|$)/);
+  if (m) return `${sy}-${pad(m[1])}-${pad(m[2])}`;
+  if (forceDateRow && /^\d{1,2}$/.test(s) && sy && sm) {
+    const n = Number(s);
+    if (n >= 1 && n <= 31) return `${sy}-${pad(sm)}-${pad(n)}`;
+  }
+  return '';
+}
+function sheetYearMonth(name, ws) {
+  const sname = String(name || '').trim();
+  let m = sname.match(/^(\d{2})년\s*(\d{1,2})월$/);
+  if (m) return [2000 + Number(m[1]), Number(m[2])];
+  m = sname.match(/^(20\d{2})년\s*(\d{1,2})월$/);
+  if (m) return [Number(m[1]), Number(m[2])];
+
+  const range = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : {s:{r:0,c:0}, e:{r:5,c:8}};
+  for (let r = range.s.r; r <= Math.min(range.e.r, 5); r++) {
+    for (let c = range.s.c; c <= Math.min(range.e.c, 12); c++) {
+      const t = cellText(ws, r, c);
+      let mm = t.match(/(\d{2})년\s*(\d{1,2})월\s*계획/);
+      if (mm) return [2000 + Number(mm[1]), Number(mm[2])];
+      mm = t.match(/(20\d{2})년\s*(\d{1,2})월\s*계획/);
+      if (mm) return [Number(mm[1]), Number(mm[2])];
+    }
+  }
+  return null;
+}
+function isWorkerName(s) {
+  s = normalizeText(s);
+  if (!s) return false;
+  if (['요일','이름','담당자','순번','병원명','주요 일정','지원 인력'].includes(s)) return false;
+  if (/^\d+$/.test(s)) return false;
+  return true;
+}
+function isGroupLabel(s) {
+  s = normalizeText(s).replace(/\s+/g,'');
+  return ['경영진','관리팀','개원&경영지원팀','지원인력'].includes(s);
+}
+function isWeekHeaderRow(ws, r) {
+  const a = cellText(ws, r, 0);
+  const weekdayCnt = [2,3,4,5,6,7,8].filter(c => /^[일월화수목금토]$/.test(cellText(ws,r,c))).length;
+  return /\d+\s*주차/.test(a) && weekdayCnt >= 5;
+}
+function buildWeekDateCols(ws, weekRow, dateRow, sy, sm) {
+  const header = cellText(ws, weekRow, 0);
+  const wm = header.match(/(\d+)\s*주차/);
+  const weekNo = wm ? Number(wm[1]) : 0;
+
+  // 진설 스케줄 원본은 C~I가 항상 일~토이며,
+  // 1주차는 '해당 월 1일이 포함된 주'부터 시작합니다.
+  // 기존 버전의 -7일 보정 때문에 전체가 1주 앞당겨지는 문제가 있어 제거했습니다.
+  // 수식 캐시가 비거나 밀리면 날짜열이 한 칸씩 어긋나므로, 주차 기준으로 날짜를 직접 계산합니다.
+  if (weekNo) {
+    const first = new Date(sy, sm - 1, 1);
+    const sundayOfFirstWeek = new Date(sy, sm - 1, 1 - first.getDay());
+    const start = new Date(sundayOfFirstWeek.getFullYear(), sundayOfFirstWeek.getMonth(), sundayOfFirstWeek.getDate() + ((weekNo - 1) * 7));
+    const computed = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      computed.push(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`);
+    }
+    return computed.map((date, i) => ({col:i+2, date}));
+  }
+
+  const dates = [];
+  for (let c=2; c<=8; c++) dates.push(parseCellDate(ws, dateRow, c, sy, sm, true));
+
+  for (let i=1; i<dates.length; i++) {
+    if (!dates[i] && dates[i-1]) dates[i] = addDaysYMD(dates[i-1], 1);
+  }
+  for (let i=dates.length-2; i>=0; i--) {
+    if (!dates[i] && dates[i+1]) dates[i] = addDaysYMD(dates[i+1], -1);
+  }
+
+  return dates.map((date, i) => ({col:i+2, date})).filter(x => !!x.date);
+}
+function parseWorkbook(wb) {
+  const rows = [];
+  const seen = new Set();
+
+  wb.SheetNames.forEach(name => {
+    const ws = wb.Sheets[name];
+    if (!ws || !ws['!ref']) return;
+    const ym = sheetYearMonth(name, ws);
+    if (!ym) return;
+    const [sy, sm] = ym;
+    const range = XLSX.utils.decode_range(ws['!ref']);
+
+    const weekStarts = [];
+    for (let r=range.s.r; r<=range.e.r; r++) {
+      if (isWeekHeaderRow(ws, r)) weekStarts.push(r);
+    }
+    if (!weekStarts.length) return;
+
+    weekStarts.forEach((weekRow, idx) => {
+      const dateRow = weekRow + 1;
+      const currentDateCols = buildWeekDateCols(ws, weekRow, dateRow, sy, sm);
+      if (currentDateCols.length < 3) return;
+      const nextWeek = idx + 1 < weekStarts.length ? weekStarts[idx+1] : range.e.r + 1;
+      let currentGroup = '';
+
+      for (let r = weekRow + 3; r < nextWeek; r++) {
+        const colA = cellText(ws, r, 0);
+        const colB = cellText(ws, r, 1);
+        if (isGroupLabel(colA)) currentGroup = colA;
+        const worker = isWorkerName(colB) ? colB : '';
+        if (!worker || worker.includes('공석')) continue;
+
+        currentDateCols.forEach(item => {
+          const ds = item.date;
+          const p = parseYMD(ds);
+          if (p.y !== sy || p.m !== sm) return;
+
+          const rawCell = cellObj(ws, r, item.col);
+          let work = rawCell ? (rawCell.w !== undefined ? String(rawCell.w).trim() : normalizeText(rawCell.v)) : '';
+          work = String(work || '').replace(/\r\n/g, '\n').trim();
+
+          // 날짜/보조 숫자 또는 수식 잔여값이 근무내용으로 들어오는 경우 방지
+          if (/^\d+$/.test(work) && Number(work) >= 1 && Number(work) <= 31) work = '';
+          if (/^[일월화수목금토]$/.test(work)) work = '';
+
+          const key = `${ds}|${worker}|${work}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          rows.push({
+            year: sy,
+            month: sm,
+            date: ds,
+            day: p.d,
+            weekday: weekdayOf(p.y, p.m, p.d),
+            group: currentGroup,
+            worker,
+            work
+          });
+        });
+      }
+    });
+  });
+
+  rows.sort((a,b) => a.date.localeCompare(b.date) || a.worker.localeCompare(b.worker,'ko'));
+  return rows;
+}
+
+function refreshSelectors() {
+  const years = [...new Set(scheduleData.map(r=>r.year))].sort((a,b)=>a-b);
+  const yearSel = document.getElementById('yearSelect');
+  const monthSel = document.getElementById('monthSelect');
+  const periodSel = document.getElementById('periodSelect');
+  const workerSel = document.getElementById('workerSelect');
+
+  if (!years.length) {
+    yearSel.innerHTML = '<option value="">업로드 필요</option>';
+    monthSel.innerHTML = '<option value="">업로드 필요</option>';
+    workerSel.innerHTML = '<option value="">업로드 필요</option>';
+    document.getElementById('summary').innerHTML = '';
+    const body = document.querySelector('#resultTable tbody');
+    if (body) body.innerHTML = '<tr><td colspan="5">엑셀 파일을 업로드하면 조회됩니다.</td></tr>';
+  } else {
+    yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+    const latest = scheduleData.reduce((a,r)=> !a || r.year>a.year || (r.year===a.year && r.month>a.month) ? r : a, null);
+    if (latest) yearSel.value = latest.year;
+    updateMonths();
+    updateWorkers();
+  }
+
+  yearSel.onchange = () => { updateMonths(); updateWorkers(); renderList(); };
+  monthSel.onchange = () => { updateWorkers(); renderList(); };
+  if (periodSel) periodSel.onchange = () => { updateWorkers(); renderList(); };
+  workerSel.onchange = renderList;
+}
+function updateMonths() {
+  const y = Number(document.getElementById('yearSelect').value);
+  const months = [...new Set(scheduleData.filter(r=>r.year===y).map(r=>r.month))].sort((a,b)=>a-b);
+  const sel = document.getElementById('monthSelect');
+  const cur = Number(sel.value);
+  if (!months.length) {
+    sel.innerHTML = '<option value="">업로드 필요</option>';
+    return;
+  }
+  sel.innerHTML = months.map(m=>`<option value="${m}">${m}월</option>`).join('');
+  if (months.includes(cur)) sel.value = cur;
+}
+function updateWorkers() {
+  const range = selectedRangeMonths();
+  const keys = new Set(range.map(x=>monthKey(x.year,x.month)));
+  const workers = [...new Set(scheduleData.filter(r=>keys.has(monthKey(r.year,r.month))).map(r=>r.worker).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const sel = document.getElementById('workerSelect');
+  const cur = sel.value;
+  if (!workers.length) {
+    sel.innerHTML = '<option value="">업로드 필요</option>';
+    return;
+  }
+  sel.innerHTML = workers.map(w=>`<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('');
+  if (workers.includes(cur)) sel.value = cur;
+}
+function classify(work) {
+  if (!work) return ['휴무','off'];
+  if (offRegex.test(work)) return ['휴무/연차','off'];
+  return ['근무',''];
+}
+
+let workNameMap = {
+  // 병원 관리 현황표 기준 치환표
+  '광명마디':'광명마디튼튼마취통증의학과',
+  '상암':'(상암)연세DMC재활의학과',
+  'DMC':'(상암)연세DMC재활의학과',
+  '용인보정':'(용인)보정탑정형외과',
+  '보정':'(용인)보정탑정형외과',
+  '용인':'(용인)보정탑정형외과',
+  '역곡':'부천역곡탑정형외과의원',
+  '부천역곡':'부천역곡탑정형외과의원',
+  '약수':'약수바른정형외과의원',
+  '동탄대방':'동탄대방튼튼재활의학과의원',
+  '대방':'동탄대방튼튼재활의학과의원',
+  '연세탑튼튼':'(용인)연세탑튼튼의원',
+  '기흥':'기흥마디튼튼의원',
+  '성신':'(성신)삼성본정형외과의원',
+  '광명척척':'광명척척365정형외과의원',
+  '청주':'(청주)서울든든한통증의학과',
+
+  '419':'(419)연세더바른통증의학과',
+  '태평':'(태평)연세정석정형외과',
+  '구로':'구로바른재활의학과의원',
+  '남구로':'구로바른재활의학과의원',
+  '중계':'중계마디튼튼의원',
+  '평택탑':'평택탑마취통증의학과',
+  '평택':'평택탑마취통증의학과',
+  '신대방':'(신대방)더조은마취통증의학과의원',
+  '답십리':'답십리마디튼튼의원',
+  '야탑':'(야탑) 본척척재활의학과',
+  '강서삼성':'강서삼성정형외과',
+
+  '가양':'가양삼성정형외과',
+  '광진':'광진본튼튼',
+  '문래':'문래본튼튼의원',
+  '주안':'주안더굿정형외과의원',
+  '검단':'검단바른정형외과',
+  '건대':'(건대)서울스타본정형외과',
+
+  '봉천':'(봉천)관악탑마취통증의학과의원',
+  '관악탑':'(봉천)관악탑마취통증의학과의원',
+  '대화':'(일산)대화튼튼정형외과',
+  '일산':'(일산)대화튼튼정형외과',
+  '만수':'(인천)만수더굿마취통증의학과의원',
+  '은평':'(은평)바로척통증의학과',
+  '양재':'양재마디튼튼의원',
+  '덕계':'(덕계)연세원탑정형외과의원',
+
+  '수락산':'(수락산)참바른마취통증의학과',
+  '구리':'구리원탑정형외과의원',
+  '동오':'동오튼튼정형외과의원',
+  '광주':'(광주)상무더튼튼의원',
+  '상무':'(광주)상무더튼튼의원',
+  '목포':'(목포)하당탑튼튼의원',
+  '하당':'(목포)하당탑튼튼의원',
+  '시청역':'시청역퍼펙트정형외과의원',
+  '송내':'송내탑정형외과의원',
+  '잠실':'잠실퍼스트정형외과의원',
+  '서정':'서정탑통증의학과의원',
+
+  '화명':'(부산)화명마디튼튼재활의학과의원',
+  '부산화명':'(부산)화명마디튼튼재활의학과의원',
+  '울산하이탑':'(울산)하이탑마취통증의학과의원',
+  '하이탑':'(울산)하이탑마취통증의학과의원',
+  '울산방어진':'(울산)방어진아산탑마취통증의학과',
+  '방어진':'(울산)방어진아산탑마취통증의학과',
+  '충남아산':'(충남아산) 연세온마취통증의학과',
+  '아산':'(충남아산) 연세온마취통증의학과',
+  '동래':'(부산) 동래바른신경외과의원',
+  '대연':'(부산)대연88마취통증의학과',
+  '개금':'(부산)개금마취통증의학과의원',
+
+  '선부':'선부365정형외과의원',
+  '평택송탄':'(평택)기댐마취통증의학과',
+  '기댐':'(평택)기댐마취통증의학과',
+  '지축':'지축바로척365의원',
+  '파주교하':'(파주교하)바른마디튼튼의원',
+  '파주':'(파주교하)바른마디튼튼의원',
+  '교하':'(파주교하)바른마디튼튼의원',
+  '여의도':'여의도바른마취통증의학과의원',
+  '화정':'화정바로365정형외과의원',
+  '사천':'(사천)삼성바른정형외과의원',
+
+  '개포':'연세개포재활의학과의원',
+  '우장산':'우장산본앤마디정형외과의원',
+  '동탄':'(동탄)신통방통의원',
+  '민락':'(민락)서울거탑정형외과의원',
+  '고덕':'고덕삼성본재활의학과의원',
+
+  '쌍문':'(쌍문)성모튼튼의원',
+  '삼양':'(삼양)성모원탑365신경외과의원',
+  '의왕':'(의왕)인덕원탑정형외과의원',
+  '인덕원':'(의왕)인덕원탑정형외과의원',
+  '안양':'안양365바른정형외과의원',
+
+  '계산':'(계산)계양연세365정형외과의원',
+  '계양':'(계산)계양연세365정형외과의원',
+  '오창':'(오창)고려바른정형외과의원',
+
+  // 일정표에 자주 쓰이는 기타 약칭
+  '동탄센터':'동탄대방튼튼재활의학과의원',
+  '행신':'행신',
+  '용인보정':'(용인)보정탑정형외과'
+}
+
+function initMappingArea() {
+  const area = document.getElementById('mappingArea');
+  if (!area) return;
+  area.value = Object.entries(workNameMap).map(([k,v]) => `${k}=${v}`).join('\n');
+}
+function toggleMappingArea() {
+  const area = document.getElementById('mappingArea');
+  if (!area) return;
+  area.style.display = area.style.display === 'block' ? 'none' : 'block';
+}
+function applyMappingText() {
+  const area = document.getElementById('mappingArea');
+  if (!area) return;
+  const next = {};
+  area.value.split(/\r?\n/).forEach(line => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) return;
+    const idx = t.indexOf('=');
+    if (idx < 1) return;
+    const k = t.slice(0, idx).trim();
+    const v = t.slice(idx + 1).trim();
+    if (k && v) next[k] = v;
+  });
+  workNameMap = next;
+  document.getElementById('status').textContent = `근무내용 변환표를 적용했습니다. 등록 항목: ${Object.keys(workNameMap).length.toLocaleString()}개`;
+  renderList();
+}
+function cleanWorkToken(token) {
+  return String(token || '')
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\d+$/g, '')
+    .replace(/\s+/g, '')
+    .trim();
+}
+function convertWorkText(work) {
+  if (!work) return '';
+  if (offRegex.test(work)) return work;
+  const keys = Object.keys(workNameMap).sort((a,b)=>b.length-a.length);
+  const pieces = String(work).split(/\s*(?:\/|,|、|→|\n)\s*/).filter(Boolean);
+  const converted = [];
+  pieces.forEach(part => {
+    const cleaned = cleanWorkToken(part);
+    if (!cleaned) return;
+    const hit = keys.find(k => cleaned.includes(k) || part.includes(k));
+    if (hit) {
+      const name = workNameMap[hit];
+      if (!converted.includes(name)) converted.push(name);
+    }
+  });
+  return converted.length ? converted.join(' / ') : work;
+}
+function displayWork(work) {
+  const on = document.getElementById('convertToggle')?.checked;
+  return on ? convertWorkText(work) : work;
+}
+function renderList() {
+  const y=Number(document.getElementById('yearSelect').value), m=Number(document.getElementById('monthSelect').value), worker=document.getElementById('workerSelect').value;
+  const range = selectedRangeMonths();
+  const body=document.querySelector('#resultTable tbody');
+  if (!y || !m || !worker || !range.length) { body.innerHTML='<tr><td colspan="5">조회할 데이터가 없습니다.</td></tr>'; return; }
+  const keys = new Set(range.map(x=>monthKey(x.year,x.month)));
+  const target = scheduleData.filter(r=>keys.has(monthKey(r.year,r.month)) && r.worker===worker);
+  const byDate = new Map();
+  target.forEach(r=>{
+    // 동일 날짜 중복 시, 같은 날짜 셀의 실제 값을 우선하되 기존 값이 빈칸이고 새 값이 있으면 새 값으로 보완합니다.
+    if(!byDate.has(r.date) || (!byDate.get(r.date).work && r.work)) byDate.set(r.date,r);
+  });
+  let rows='', totalDays=0, workCnt=0, offCnt=0;
+  range.forEach(({year:yy, month:mm}) => {
+    const max=daysInMonth(yy,mm);
+    for(let d=1; d<=max; d++) {
+      const ds=ymd(yy,mm,d), wd=weekdayOf(yy,mm,d), weekend=isWeekendYMD(yy,mm,d);
+      const rec=byDate.get(ds) || {worker, date:ds, work:'', group:''};
+      const [label, cls] = classify(rec.work);
+      totalDays++;
+      if(cls==='off') offCnt++; else workCnt++;
+      const shownWork = rec.work ? displayWork(rec.work) : '';
+      rows += `<tr><td class="day ${weekend?'weekend':''}">${ds}</td><td class="${weekend?'weekend':''}">${wd}</td><td>${escapeHtml(worker)}</td><td class="work">${shownWork ? escapeHtml(shownWork) : '<span style="color:#94a3b8;">휴무(공백)</span>'}</td><td><span class="badge ${cls}">${label}</span></td></tr>`;
+    }
+  });
+  body.innerHTML = rows;
+  const first = range[0], last = range[range.length-1];
+  const periodText = range.length===1 ? `${first.year}.${pad(first.month)}` : `${first.year}.${pad(first.month)} ~ ${last.year}.${pad(last.month)}`;
+  document.getElementById('summary').innerHTML = `<div class="card"><div class="k">조회 기간</div><div class="v">${periodText}</div></div><div class="card"><div class="k">총 일수</div><div class="v">${totalDays}일</div></div><div class="card"><div class="k">근무 표기</div><div class="v">${workCnt}일</div></div><div class="card"><div class="k">휴무 산정</div><div class="v">${offCnt}일</div></div>`;
+}
+async function copyTable() {
+  const trs=[...document.querySelectorAll('#resultTable tr')];
+  const text=trs.map(tr=>[...tr.children].map(td=>td.innerText.replace(/\n/g,' ')).join('\t')).join('\n');
+  await navigator.clipboard.writeText(text);
+  document.getElementById('status').textContent='표 내용을 클립보드에 복사했습니다. 엑셀/문서에 바로 붙여넣을 수 있습니다.';
+}
+document.getElementById('fileInput').addEventListener('change', async e => {
+  const file=e.target.files[0]; if(!file) return;
+  const buf=await file.arrayBuffer();
+  const wb=XLSX.read(buf, {type:'array', cellDates:true});
+  scheduleData=parseWorkbook(wb);
+  document.getElementById('status').textContent = scheduleData.length
+    ? `${file.name} 파일 기준으로 데이터를 불러왔습니다. 추출 건수: ${scheduleData.length.toLocaleString()}건`
+    : `${file.name} 파일에서 인식 가능한 월별 스케줄 데이터를 찾지 못했습니다. 시트명이 '26년 1월' 형식인지 확인해 주세요.`;
+  initMappingArea();
+  refreshSelectors();
+  renderList();
+});
+initMappingArea();
+refreshSelectors();
+
+function toggleTheme(){
+  document.body.classList.toggle('dark-mode');
+  localStorage.setItem('jinsulWorkTheme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+  const btn=[...document.querySelectorAll('.util-btn')].find(b=>b.textContent.includes('모드'));
+  if(btn) btn.textContent=document.body.classList.contains('dark-mode')?'라이트모드':'다크모드';
+}
+(function(){
+  if(localStorage.getItem('jinsulWorkTheme')==='dark') document.body.classList.add('dark-mode');
+  setTimeout(()=>{
+    const btn=[...document.querySelectorAll('.util-btn')].find(b=>b.textContent.includes('모드'));
+    if(btn) btn.textContent=document.body.classList.contains('dark-mode')?'라이트모드':'다크모드';
+  },0);
+})();
+
+
+// JINSUL 로고 자동 적용: 현재 GitHub 저장소의 진설로고.png를 우선 사용하고, 실패 시 상대경로/백업경로로 자동 전환합니다.
+(function initJinsulLogo(){
+  const img = document.getElementById('jinsulLogo');
+  if(!img) return;
+  const candidates = [
+    'https://raw.githubusercontent.com/xginini-dot/jinsul/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png',
+    './%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png',
+    './진설로고.png',
+    'https://raw.githubusercontent.com/jinsul-lab/openteam/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png'
+  ];
+  let idx = 0;
+  img.onerror = function(){
+    idx += 1;
+    if(idx < candidates.length) img.src = candidates[idx];
+  };
+})();
+</script>
+</body>
+</html>
