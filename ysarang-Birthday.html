@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>JINSUL | 만 18세 초과 n월 생일자 리스트업</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+
+    :root {
+      --bg: #f3efe7;
+      --bg2: #ebe3d5;
+      --card: rgba(255,255,255,.78);
+      --card-strong: rgba(255,255,255,.94);
+      --text: #1f2933;
+      --muted: #6f665c;
+      --line: rgba(170,150,120,.32);
+      --line-strong: rgba(170,150,120,.52);
+      --gold: #bea98b;
+      --gold-dark: #8f7a5c;
+      --accent: #9b6b2f;
+      --danger: #b93a32;
+      --shadow: 0 22px 60px rgba(52,39,25,.12);
+    }
+    html[data-theme="dark"] {
+      --bg: #080808;
+      --bg2: #2a241d;
+      --card: rgba(255,255,255,.075);
+      --card-strong: rgba(255,255,255,.12);
+      --text: #f8f3ea;
+      --muted: #c5b69e;
+      --line: rgba(190,169,139,.28);
+      --line-strong: rgba(190,169,139,.52);
+      --gold: #d8c7ac;
+      --gold-dark: #bea98b;
+      --accent: #e0c28e;
+      --danger: #ff8a8a;
+      --shadow: 0 28px 80px rgba(0,0,0,.42);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Pretendard, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background:
+        radial-gradient(circle at top center, rgba(190,169,139,.24), transparent 38%),
+        linear-gradient(135deg, var(--bg), var(--bg2));
+      color: var(--text);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("https://xginini-dot.github.io/jinsul/진설로고.png");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: min(560px, 72vw);
+      opacity: .055;
+      filter: grayscale(1);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px 18px 52px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .tool-btn {
+      min-height: 42px;
+      border: 1px solid var(--line-strong);
+      background: var(--card);
+      color: var(--text);
+      padding: 0 16px;
+      border-radius: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(0,0,0,.08);
+      backdrop-filter: blur(14px);
+    }
+    .tool-btn.theme {
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #fff;
+      border-color: rgba(255,255,255,.24);
+    }
+    .tool-btn:hover { transform: translateY(-1px); }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding: 18px 12px 10px;
+    }
+    .logo {
+      width: 230px;
+      max-width: 70%;
+      height: auto;
+      display: block;
+      margin: 0 auto 18px;
+      filter: drop-shadow(0 18px 35px rgba(0,0,0,.26));
+    }
+    html[data-theme="dark"] .logo { filter: drop-shadow(0 18px 35px rgba(0,0,0,.45)); }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      color: var(--gold);
+      background: rgba(190,169,139,.12);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      margin-bottom: 14px;
+    }
+    .badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+    }
+    header h1 {
+      margin: 0 0 10px;
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.15;
+      letter-spacing: -.06em;
+      font-weight: 950;
+    }
+    header p {
+      margin: 0 auto;
+      max-width: 860px;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 14px;
+    }
+    .card {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, var(--card), rgba(255,255,255,.055));
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      margin-bottom: 18px;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(190,169,139,.17), transparent 42%);
+      pointer-events: none;
+    }
+    .card > * { position: relative; z-index: 1; }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 950;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -.03em;
+    }
+    .card-title::before {
+      content: "";
+      width: 9px;
+      height: 22px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--gold), var(--gold-dark));
+      box-shadow: 0 0 18px rgba(190,169,139,.32);
+    }
+    .card-subtitle {
+      margin-top: 5px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) 190px 140px;
+      gap: 12px;
+      align-items: end;
+    }
+    .file-box {
+      border-radius: 18px;
+      border: 1px dashed var(--line-strong);
+      background: rgba(190,169,139,.09);
+      padding: 13px;
+      font-size: 12px;
+    }
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 800;
+    }
+    input[type="file"], input[type="date"], select {
+      width: 100%;
+      min-height: 40px;
+      border-radius: 14px;
+      border: 1px solid var(--line-strong);
+      background: var(--card-strong);
+      color: var(--text);
+      padding: 8px 11px;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(190,169,139,.16);
+    }
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 9px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 13px;
+      border: 1px solid var(--line-strong);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 900;
+      transition: .16s ease;
+    }
+    button.primary {
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      color: #fff;
+      box-shadow: 0 14px 28px rgba(0,0,0,.14);
+      border-color: rgba(255,255,255,.24);
+    }
+    button.secondary {
+      background: var(--card-strong);
+      color: var(--text);
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:disabled { opacity: .45; cursor: default; box-shadow: none; }
+    .status-text {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: pre-line;
+      line-height: 1.55;
+    }
+    .table-scroll {
+      overflow-x: auto;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--card-strong);
+    }
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      font-weight: 950;
+      color: var(--muted);
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line-strong);
+      text-align: left;
+      white-space: nowrap;
+      background: rgba(190,169,139,.12);
+    }
+    tbody tr:nth-child(odd) { background: rgba(190,169,139,.055); }
+    tbody tr:hover { background: rgba(190,169,139,.14); }
+    tbody td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+      color: var(--text);
+      font-weight: 650;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    code {
+      background: rgba(190,169,139,.13);
+      padding: 2px 5px;
+      border-radius: 6px;
+      color: var(--accent);
+      font-weight: 900;
+    }
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 28px;
+      font-weight: 700;
+    }
+    @media (max-width: 780px) {
+      .app { padding: 18px 12px 42px; }
+      .topbar { justify-content: center; }
+      .tool-btn { flex: 1; }
+      .controls { grid-template-columns: 1fr; }
+      .card { padding: 18px; border-radius: 22px; }
+      header h1 { font-size: 26px; }
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <button class="tool-btn" id="btn-back" type="button">← 뒤로가기</button>
+    <button class="tool-btn theme" id="btn-theme" type="button">🌙 다크</button>
+  </div>
+
+  <header>
+    <img class="logo" src="https://xginini-dot.github.io/jinsul/진설로고.png" alt="JINSUL Logo">
+    <div class="badge">엑셀 업로드 · 오늘 기준 · n월 생일자</div>
+    <h1>만 18세 초과 n월 생일자 리스트업</h1>
+    <p>
+      월별신환 엑셀을 업로드하면 주민번호 기준 기준일 현재 만나이와 생년월일을 계산하여<br>
+      <strong>만 18세 초과(19세 이상)</strong> 이면서 선택한 <strong>n월 생일자</strong>인 환자를 리스트업합니다.
+    </p>
+  </header>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">엑셀 업로드 & 기준일 · 생월 설정</div>
+        <div class="card-subtitle">
+          첫 번째 시트에 <code>차트번호 / 성명(또는 이름/환자명) / 주민번호 / 휴대폰(또는 전화번호)</code> 열이 포함된 엑셀을 선택하세요.
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="file-box">
+        <label for="file-main">신환 엑셀 파일</label>
+        <input type="file" id="file-main" accept=".xlsx,.xls" />
+      </div>
+      <div>
+        <label for="ref-date">기준일</label>
+        <input type="date" id="ref-date" />
+      </div>
+      <div>
+        <label for="birth-month">생월 선택</label>
+        <select id="birth-month">
+          <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option><option value="04">4월</option>
+          <option value="05">5월</option><option value="06">6월</option><option value="07">7월</option><option value="08">8월</option>
+          <option value="09">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="secondary" id="btn-clear" type="button">초기화</button>
+      <button class="secondary" id="btn-export" type="button">엑셀 다운로드</button>
+      <button class="primary" id="btn-run" type="button">분석 및 리스트업</button>
+    </div>
+
+    <div class="status-text" id="status-text">
+      파일을 선택한 뒤 기준일과 생월을 설정하고 &lt;분석 및 리스트업&gt; 버튼을 눌러주세요.
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">오늘 기준 만 18세 초과 n월 생일자 리스트</div>
+        <div class="card-subtitle">
+          주민번호에서 생년월일을 추출하여, <strong>기준일 현재 만나이가 19세 이상</strong>이면서 선택한 <strong>n월 생일자</strong>만 표시합니다.
+        </div>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table id="birth-table">
+        <thead>
+          <tr><th>차트번호</th><th>성명</th><th>전화번호</th><th>만나이</th><th>생년월일</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="footer">© JINSUL · Internal Statistics System</div>
+</div>
+
+<script>
+
+  // 기준일: 기본값 오늘
+  const refDateInput = document.getElementById("ref-date");
+  (function initRefDate() {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    refDateInput.value = `${yyyy}-${mm}-${dd}`;
+  })();
+
+  const fileInput = document.getElementById("file-main");
+  const runBtn = document.getElementById("btn-run");
+  const clearBtn = document.getElementById("btn-clear");
+  const birthMonthSelect = document.getElementById("birth-month");
+  const statusTextEl = document.getElementById("status-text");
+  const tbodyBirth = document.querySelector("#birth-table tbody");
+
+  let baseRows = [];
+  // chartNum / name / phone / age / birthDate / birthMonth
+  let processedRecords = [];
+
+  function updateStatus(msg, isError = false) {
+    statusTextEl.textContent = msg;
+    statusTextEl.style.color = isError ? "#fca5a5" : "var(--muted)";
+  }
+
+  async function readExcelFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheet = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheet];
+          const json = XLSX.utils.sheet_to_json(sheet, { defval: null });
+          resolve(json);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = err => reject(err);
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function formatDate(date) {
+    if (!date) return "";
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // 주민번호 → (생년월일, 만나이, 생월)
+  function parseBirthAndAge(rrn, refDate) {
+    if (!rrn) return { age: null, birthDate: null, birthMonth: null };
+    const s = String(rrn).replace(/[^0-9]/g, "");
+    if (s.length < 7) return { age: null, birthDate: null, birthMonth: null };
+
+    const birth6 = s.slice(0, 6);
+    const code = s[6];
+
+    let century;
+    if (["1","2","5","6"].includes(code)) century = 1900;
+    else if (["3","4","7","8"].includes(code)) century = 2000;
+    else return { age: null, birthDate: null, birthMonth: null };
+
+    const yy = parseInt(birth6.slice(0, 2), 10);
+    const mm = parseInt(birth6.slice(2, 4), 10);
+    const dd = parseInt(birth6.slice(4, 6), 10);
+    if (!yy || !mm || !dd) return { age: null, birthDate: null, birthMonth: null };
+
+    const year = century + yy;
+    const birthDate = new Date(year, mm - 1, dd);
+    if (isNaN(birthDate.getTime())) return { age: null, birthDate: null, birthMonth: null };
+
+    let age = refDate.getFullYear() - year;
+    const refMonth = refDate.getMonth();
+    const refDay = refDate.getDate();
+    if (refMonth < (mm - 1) || (refMonth === (mm - 1) && refDay < dd)) age--;
+
+    if (age < 0 || age > 120 || isNaN(age)) age = null;
+
+    return { age, birthDate, birthMonth: mm };
+  }
+
+  // 헤더 자동 인식
+  function detectColumnKeys(rows) {
+    const first = rows[0] || {};
+    const keys = Object.keys(first);
+    const trim = (s) => s.replace(/\s/g, "");
+
+    let colChart = null;
+    let colName  = null;
+    let colPhone = null;
+    let colRRN   = null;
+
+    keys.forEach(k => {
+      const nk = trim(String(k));
+      if (!colChart && /차트|환자번호|차트번호/i.test(nk)) colChart = k;
+      if (!colName  && /성명|이름|환자명/i.test(nk))       colName  = k;
+      if (!colPhone && /휴대|전화/i.test(nk))              colPhone = k;
+      if (!colRRN   && /주민/i.test(nk))                   colRRN   = k;
+    });
+
+    return { colChart, colName, colPhone, colRRN };
+  }
+
+  // 만18세 초과 + n월 생일자 리스트 렌더링
+  function renderBirthdayList(monthStr, adultTotal) {
+    tbodyBirth.innerHTML = "";
+    if (!processedRecords.length) {
+      updateStatus("먼저 엑셀을 분석한 뒤 리스트업할 수 있습니다.", true);
+      return 0;
+    }
+
+    const targetMonth = parseInt(monthStr, 10); // 1~12
+
+    // 🔑 핵심 필터: 선택한 생월 + 만 18세 초과(19세 이상)
+    const filtered = processedRecords.filter(
+      r => r.birthMonth === targetMonth && r.age != null && r.age > 18
+    );
+
+    // 차트번호 기준 정렬
+    filtered.sort((a, b) => {
+      const na = Number(String(a.chartNum).replace(/[^0-9]/g,"")) || 0;
+      const nb = Number(String(b.chartNum).replace(/[^0-9]/g,"")) || 0;
+      return na - nb;
+    });
+
+    filtered.forEach(r => {
+      const tr = document.createElement("tr");
+
+      const tdChart = document.createElement("td");
+      tdChart.textContent = r.chartNum ?? "";
+      tr.appendChild(tdChart);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = r.name ?? "";
+      tr.appendChild(tdName);
+
+      const tdPhone = document.createElement("td");
+      tdPhone.textContent = r.phone ?? "";
+      tr.appendChild(tdPhone);
+
+      const tdAge = document.createElement("td");
+      tdAge.textContent = r.age != null ? r.age + "세" : "";
+      tr.appendChild(tdAge);
+
+      const tdBirth = document.createElement("td");
+      tdBirth.textContent = r.birthDate ? formatDate(r.birthDate) : "";
+      tr.appendChild(tdBirth);
+
+      tbodyBirth.appendChild(tr);
+    });
+
+    updateStatus(
+      `엑셀 분석 완료: 유효한 생년월일이 있는 환자 ${processedRecords.length}명 (그 중 성인 ${adultTotal}명)\n` +
+      `${targetMonth}월 생일자 중 성인(만 18세 초과)은 ${filtered.length}명입니다.`
+    );
+    return filtered.length;
+  }
+
+  async function handleRun() {
+    try {
+      const file = fileInput.files[0];
+      if (!file) {
+        updateStatus("엑셀 파일을 먼저 선택해 주세요.", true);
+        return;
+      }
+      if (!refDateInput.value) {
+        updateStatus("기준일을 입력해 주세요.", true);
+        return;
+      }
+
+      runBtn.disabled = true;
+      updateStatus("엑셀을 읽는 중입니다…");
+
+      const rows = await readExcelFile(file);
+      baseRows = rows;
+      processedRecords = [];
+      tbodyBirth.innerHTML = "";
+
+      if (!rows.length) {
+        updateStatus("시트에 데이터가 없습니다.", true);
+        runBtn.disabled = false;
+        return;
+      }
+
+      const refDateParts = refDateInput.value.split("-");
+      const refDate = new Date(
+        Number(refDateParts[0]),
+        Number(refDateParts[1]) - 1,
+        Number(refDateParts[2])
+      );
+
+      const { colChart, colName, colPhone, colRRN } = detectColumnKeys(rows);
+
+      if (!colChart || !colName || !colRRN) {
+        updateStatus(
+`헤더를 찾지 못했습니다. (차트/이름/주민 관련 열 이름을 확인해 주세요)
+찾은 열 → 차트:${colChart || "-"}, 이름:${colName || "-"}, 주민:${colRRN || "-"}, 전화:${colPhone || "-"}`,
+          true
+        );
+        runBtn.disabled = false;
+        return;
+      }
+
+      let total = 0, withRRN = 0, valid = 0;
+
+      rows.forEach(row => {
+        total++;
+        const chartNum = row[colChart];
+        const name = row[colName];
+        const phone = colPhone ? row[colPhone] : "";
+        const rrn = row[colRRN];
+
+        if (!rrn) return;
+        withRRN++;
+
+        const { age, birthDate, birthMonth } = parseBirthAndAge(rrn, refDate);
+        if (age == null || !birthDate || !birthMonth) return;
+
+        valid++;
+        processedRecords.push({
+          chartNum,
+          name,
+          phone: phone || "",
+          age,
+          birthDate,
+          birthMonth
+        });
+      });
+
+      const adultTotal = processedRecords.filter(r => r.age != null && r.age > 18).length;
+
+      // 현재 선택된 월 기준으로 바로 렌더링
+      renderBirthdayList(birthMonthSelect.value, adultTotal);
+
+      runBtn.disabled = false;
+
+    } catch (err) {
+      console.error(err);
+      updateStatus("엑셀 파싱 중 오류가 발생했습니다. 파일 형식/헤더명을 확인해 주세요.", true);
+      runBtn.disabled = false;
+    }
+  }
+
+  function handleClear() {
+    fileInput.value = "";
+    tbodyBirth.innerHTML = "";
+    baseRows = [];
+    processedRecords = [];
+    updateStatus("초기화 완료. 엑셀을 다시 선택한 뒤 리스트업 해주세요.");
+  }
+
+
+
+  function exportBirthdayList() {
+    if (!processedRecords.length) {
+      alert("먼저 엑셀을 분석해 주세요.");
+      return;
+    }
+    const targetMonth = parseInt(birthMonthSelect.value, 10);
+    const rows = processedRecords
+      .filter(r => r.birthMonth === targetMonth && r.age != null && r.age > 18)
+      .sort((a, b) => {
+        const na = Number(String(a.chartNum).replace(/[^0-9]/g,"")) || 0;
+        const nb = Number(String(b.chartNum).replace(/[^0-9]/g,"")) || 0;
+        return na - nb;
+      })
+      .map(r => ({
+        "차트번호": r.chartNum ?? "",
+        "성명": r.name ?? "",
+        "전화번호": r.phone ?? "",
+        "만나이": r.age != null ? r.age : "",
+        "생년월일": r.birthDate ? formatDate(r.birthDate) : ""
+      }));
+
+    if (!rows.length) {
+      alert("선택한 생월에 해당하는 만 18세 초과 대상자가 없습니다.");
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "생일자리스트");
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    XLSX.writeFile(wb, `만18세초과_${targetMonth}월_생일자_${yyyy}${mm}${dd}.xlsx`);
+  }
+
+  function jinsulGoBack() {
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = "index.html";
+  }
+
+  function jinsulApplyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("jinsul-birthday-theme", theme);
+    const btn = document.getElementById("btn-theme");
+    if (btn) btn.textContent = theme === "dark" ? "☀️ 라이트" : "🌙 다크";
+  }
+
+  function jinsulToggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "dark";
+    jinsulApplyTheme(current === "dark" ? "light" : "dark");
+  }
+
+  (function initJinsulTheme() {
+    const saved = localStorage.getItem("jinsul-birthday-theme") || "dark";
+    jinsulApplyTheme(saved);
+  })();
+
+  runBtn.addEventListener("click", handleRun);
+  clearBtn.addEventListener("click", handleClear);
+  birthMonthSelect.addEventListener("change", () => {
+    if (processedRecords.length) {
+      const adultTotal = processedRecords.filter(r => r.age != null && r.age > 18).length;
+      renderBirthdayList(birthMonthSelect.value, adultTotal);
+    }
+  });
+  document.getElementById("btn-export")?.addEventListener("click", exportBirthdayList);
+  document.getElementById("btn-back")?.addEventListener("click", jinsulGoBack);
+  document.getElementById("btn-theme")?.addEventListener("click", jinsulToggleTheme);
+
+</script>
+</body>
+</html>
