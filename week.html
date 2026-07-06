@@ -6,98 +6,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
-.header{
-    position:sticky;
-    top:0;
-    z-index:999;
-
-    display:flex;
-    justify-content:flex-end;   /* 오른쪽 정렬 */
-
-    padding:14px 28px;
-
-    background:rgba(15,15,15,.75);
-    backdrop-filter:blur(18px);
-
-    border-bottom:1px solid rgba(190,169,139,.18);
+:root{
+  --bg-radial: rgba(190,169,139,0.22);
+  --bg1:#080808;
+  --bg2:#161616;
+  --bg3:#2a241d;
+  --text:#ffffff;
+  --text-strong:#f5efe5;
+  --muted:#b9b9b9;
+  --muted2:#b8b8b8;
+  --gold:#bea98b;
+  --gold2:#d4bd95;
+  --gold3:#e8d8bd;
+  --card-bg:linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.055));
+  --card-border:rgba(190,169,139,0.26);
+  --card-hover:rgba(190,169,139,0.62);
+  --btn-bg:rgba(190,169,139,0.14);
+  --btn-hover:rgba(190,169,139,0.28);
+  --glass:rgba(15,15,15,.74);
+  --shadow:rgba(0,0,0,0.35);
+  --watermark-opacity:.055;
+  --watermark-filter:grayscale(1);
 }
 
-.header-right{
-    display:flex;
-    gap:12px;
+body.light{
+  --bg-radial: rgba(190,169,139,0.18);
+  --bg1:#f7f3ec;
+  --bg2:#f3efe7;
+  --bg3:#e8dfd1;
+  --text:#1f2937;
+  --text-strong:#111827;
+  --muted:#6b7280;
+  --muted2:#667085;
+  --card-bg:linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.58));
+  --card-border:rgba(190,169,139,0.34);
+  --card-hover:rgba(154,132,99,0.7);
+  --btn-bg:rgba(190,169,139,0.16);
+  --btn-hover:rgba(190,169,139,0.30);
+  --glass:rgba(255,255,255,.66);
+  --shadow:rgba(66,54,38,0.14);
+  --watermark-opacity:.045;
+  --watermark-filter:grayscale(1) opacity(.7);
 }
 
-.header-btn{
-
-    height:44px;
-    padding:0 18px;
-
-    border-radius:16px;
-
-    border:1px solid rgba(190,169,139,.35);
-
-    background:rgba(255,255,255,.05);
-
-    color:#f4ede2;
-
-    font-weight:700;
-
-    cursor:pointer;
-
-    transition:.2s;
-}
-
-.header-btn:hover{
-
-    transform:translateY(-2px);
-
-    background:rgba(190,169,139,.15);
-
-    border-color:#bea98b;
-
-}
 * {
   box-sizing: border-box;
   font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
- {
+body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top center, rgba(190,169,139,0.22), transparent 38%),
-    linear-gradient(135deg, #080808, #161616 45%, #2a241d);
-  color: #fff;
-}
-  .top-actions{
-    display:flex;
-    justify-content:flex-start;
-    margin-bottom:20px;
+    radial-gradient(circle at top center, var(--bg-radial), transparent 38%),
+    linear-gradient(135deg, var(--bg1), var(--bg2) 45%, var(--bg3));
+  color: var(--text);
+  transition: background .25s ease, color .25s ease;
 }
 
-.nav-btn{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:10px 18px;
-    border-radius:14px;
-    border:1px solid rgba(190,169,139,.35);
-    background:rgba(255,255,255,.08);
-    color:#f5efe5;
-    cursor:pointer;
-    font-size:14px;
-    font-weight:700;
-    transition:.2s;
-    backdrop-filter:blur(10px);
-}
-
-.nav-btn:hover{
-    background:rgba(190,169,139,.18);
-    border-color:#bea98b;
-    transform:translateY(-2px);
-}
-
-::before {
+body::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -105,9 +72,54 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: min(720px, 78vw);
-  opacity: 0.055;
-  filter: grayscale(1);
+  opacity: var(--watermark-opacity);
+  filter: var(--watermark-filter);
   pointer-events: none;
+}
+
+.utility-bar{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+  padding:14px 26px;
+  background:var(--glass);
+  border-bottom:1px solid rgba(190,169,139,.18);
+  backdrop-filter: blur(18px);
+}
+
+.nav-btn,
+.theme-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:44px;
+  padding:0 18px;
+  border-radius:16px;
+  border:1px solid rgba(190,169,139,.38);
+  background:rgba(255,255,255,.07);
+  color:var(--text-strong);
+  cursor:pointer;
+  font-size:14px;
+  font-weight:800;
+  transition:.2s;
+  box-shadow:0 14px 28px rgba(0,0,0,.10);
+}
+
+body.light .nav-btn,
+body.light .theme-btn{
+  background:rgba(255,255,255,.72);
+  color:#2b241b;
+}
+
+.nav-btn:hover,
+.theme-btn:hover{
+  background:var(--btn-hover);
+  border-color:var(--gold);
+  transform:translateY(-2px);
 }
 
 .wrap {
@@ -130,6 +142,10 @@
   filter: drop-shadow(0 18px 35px rgba(0,0,0,0.45));
 }
 
+body.light .logo{
+  filter: drop-shadow(0 14px 28px rgba(66,54,38,.18));
+}
+
 .badge {
   display: inline-block;
   padding: 8px 16px;
@@ -139,6 +155,12 @@
   letter-spacing: 1px;
   color: #c9b89c;
   margin-bottom: 18px;
+  background:rgba(255,255,255,.04);
+}
+
+body.light .badge{
+  background:rgba(255,255,255,.55);
+  color:#8a765c;
 }
 
 h1 {
@@ -146,11 +168,12 @@ h1 {
   font-size: 42px;
   letter-spacing: 2px;
   font-weight: 800;
+  color:var(--text-strong);
 }
 
 .sub {
   margin: 0;
-  color: #b9b9b9;
+  color: var(--muted);
   font-size: 17px;
   line-height: 1.7;
 }
@@ -158,7 +181,7 @@ h1 {
 .sec-title {
   margin: 0 0 18px;
   font-size: 18px;
-  color: #f5efe5;
+  color: var(--text-strong);
   font-weight: 800;
 }
 
@@ -175,9 +198,9 @@ h1 {
   min-height: 230px;
   padding: 30px;
   border-radius: 26px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.11), rgba(255,255,255,0.055));
-  border: 1px solid rgba(190,169,139,0.26);
-  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 24px 60px var(--shadow);
   backdrop-filter: blur(12px);
   transition: 0.22s ease;
   display: flex;
@@ -195,7 +218,7 @@ h1 {
 
 .card:hover {
   transform: translateY(-7px);
-  border-color: rgba(190,169,139,0.62);
+  border-color: var(--card-hover);
 }
 
 .card:hover::before {
@@ -213,7 +236,7 @@ h1 {
   border-radius: 18px;
   background: rgba(190,169,139,0.16);
   border: 1px solid rgba(190,169,139,0.35);
-  color: #d4bd95;
+  color: var(--gold2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -223,12 +246,12 @@ h1 {
 .card h3 {
   margin: 0 0 10px;
   font-size: 22px;
-  color: #f5efe5;
+  color: var(--text-strong);
 }
 
 .card p {
   margin: 0 0 26px;
-  color: #b8b8b8;
+  color: var(--muted2);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -242,60 +265,64 @@ h1 {
   padding: 15px;
   border-radius: 14px;
   border: 1px solid rgba(190,169,139,0.42);
-  background: rgba(190,169,139,0.14);
-  color: #e8d8bd;
+  background: var(--btn-bg);
+  color: var(--gold3);
   font-weight: 800;
   font-size: 15px;
   text-decoration: none;
   transition: 0.2s ease;
 }
 
+body.light .btn{
+  color:#7b664d;
+}
+
 .btn:hover {
-  background: rgba(190,169,139,0.28);
-  color: #fff;
+  background: var(--btn-hover);
+  color: var(--text-strong);
 }
 
 footer {
   margin-top: 54px;
   text-align: center;
   font-size: 13px;
-  color: #8d8d8d;
+  color: var(--muted);
 }
 
 @media (max-width: 768px) {
+  .utility-bar{
+    padding:12px 14px;
+    gap:8px;
+  }
+  .nav-btn,.theme-btn{
+    min-height:40px;
+    padding:0 13px;
+    border-radius:14px;
+    font-size:13px;
+  }
   .grid {
     grid-template-columns: 1fr;
   }
-
   h1 {
     font-size: 32px;
   }
-
   .logo {
     width: 210px;
+  }
+  .wrap{
+    padding-top:34px;
   }
 }
 </style>
 </head>
 
-<>
-<header class="header">
+<body>
+  <header class="utility-bar">
+    <button class="nav-btn" onclick="goBack()">← 뒤로가기</button>
+    <button class="theme-btn" id="themeToggle" onclick="toggleTheme()">🌙 다크모드</button>
+  </header>
 
-    <div class="header-right">
-
-        <button class="header-btn" onclick="goBack()">
-            ← 뒤로가기
-        </button>
-
-        <button class="header-btn" onclick="toggleTheme()">
-            🌙 다크모드
-        </button>
-
-    </div>
-
-</header>
   <main class="wrap">
-
     <section class="header">
       <img src="진설로고.png" alt="JINSUL" class="logo" />
       <br>
@@ -371,18 +398,34 @@ footer {
     <footer>
       © JINSUL. Internal use only.
     </footer>
-
   </main>
+
 <script>
 function goBack(){
-
-    if(document.referrer){
-        history.back();
-    }else{
-        location.href="index.html";
-    }
-
+  if(document.referrer){
+    history.back();
+  }else{
+    location.href="index.html";
+  }
 }
+
+function applyTheme(theme){
+  const isLight = theme === 'light';
+  document.body.classList.toggle('light', isLight);
+  const btn = document.getElementById('themeToggle');
+  btn.textContent = isLight ? '🌙 다크모드' : '☀ 라이트모드';
+  localStorage.setItem('jinsulTheme', theme);
+}
+
+function toggleTheme(){
+  const next = document.body.classList.contains('light') ? 'dark' : 'light';
+  applyTheme(next);
+}
+
+(function initTheme(){
+  const saved = localStorage.getItem('jinsulTheme') || 'dark';
+  applyTheme(saved);
+})();
 </script>
-</>
+</body>
 </html>
