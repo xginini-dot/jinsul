@@ -122,6 +122,43 @@
       margin-top:20px;
     }
 
+
+    /* 우측 상단 플로팅 버튼 */
+    .floating-actions{
+      position:fixed;
+      top:18px;
+      right:22px;
+      z-index:9999;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      pointer-events:auto;
+    }
+    .floating-btn{
+      min-height:46px;
+      padding:0 18px;
+      border-radius:16px;
+      border:1px solid var(--border2);
+      background:rgba(30,30,30,.72)!important;
+      color:#f5efe5!important;
+      font-weight:900;
+      cursor:pointer;
+      transition:.22s ease;
+      backdrop-filter:blur(18px);
+      box-shadow:0 10px 30px rgba(0,0,0,.28);
+      white-space:nowrap;
+    }
+    html[data-theme="light"] .floating-btn{
+      background:rgba(255,255,255,.78)!important;
+      color:#3b3126!important;
+      box-shadow:0 12px 30px rgba(80,64,40,.14);
+    }
+    .floating-btn:hover{
+      transform:translateY(-3px);
+      background:rgba(203,181,145,.22)!important;
+      border-color:var(--gold);
+    }
+
     .wrap{
       padding:16px 18px 72px;
       max-width:1280px;
@@ -154,9 +191,12 @@
     .grid > div{
       border:1px solid var(--border);
       border-radius:22px;
-      padding:16px;
+      padding:18px;
       background:rgba(255,255,255,.04);
       min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
     }
     label{
       display:block;
@@ -170,16 +210,17 @@
     input[type=file]{
       width:100%;
       max-width:100%;
+      height:58px;
       min-height:58px;
-      padding:0 14px;
+      padding:8px 14px;
       border-radius:16px;
       border:1px dashed var(--border2);
       background:var(--input);
       color:var(--text);
       font-size:14px;
       outline:none;
-      display:flex;
-      align-items:center;
+      line-height:40px;
+      vertical-align:middle;
     }
     input[type=file]::file-selector-button{
       height:40px;
@@ -196,10 +237,11 @@
     .right{
       display:flex;
       gap:10px;
-      justify-content:flex-end;
+      justify-content:center;
       align-items:center;
       flex-wrap:wrap;
-      margin-top:16px!important;
+      margin-top:18px!important;
+      width:100%;
     }
     button,.theme-toggle{
       min-height:44px;
@@ -282,6 +324,17 @@
       .grid{grid-template-columns:repeat(2,1fr)}
     }
     @media(max-width:760px){
+      .floating-actions{
+        top:12px;
+        right:12px;
+        gap:8px;
+      }
+      .floating-btn{
+        min-height:40px;
+        padding:0 12px;
+        font-size:13px;
+        border-radius:14px;
+      }
       header{padding-top:28px}
       header .logo{width:190px}
       .wrap{padding:10px 12px 56px}
@@ -320,20 +373,23 @@
 
     @media print{
       body{background:#fff!important; color:#111!important}
-      .wm,.header-tools,.right,button{display:none!important}
+      .wm,.header-tools,.floating-actions,.right,button{display:none!important}
       .card{box-shadow:none!important; border:1px solid #ddd!important}
       th,td{color:#111!important; border-color:#ddd!important}
     }
   </style>
 </head>
 <body>
+  <div class="floating-actions" aria-label="페이지 빠른 메뉴">
+    <button type="button" class="floating-btn" onclick="goBack()">← 뒤로가기</button>
+    <button type="button" class="floating-btn" id="floatingThemeToggle">☀️ 라이트모드</button>
+  </div>
   <div class="wm" aria-hidden="true"><img src="진설로고.png" alt=""></div>
   <header>
     <img src="진설로고.png" alt="JINSUL" class="logo" />
     <div class="badge">JINSUL ONE VISIT SYSTEM</div>
     <h1>의사랑 주사 1회 상세 분석</h1>
     <p class="sub">진료실별 초진 환자 중 기간 내 주사 처방이 1회인 환자 상세 정보</p>
-    <div class="header-tools"><button type="button" id="themeToggle" class="theme-toggle">☀️ 라이트로 보기</button></div>
   </header>
 
   <div class="wrap">
@@ -528,13 +584,23 @@
   </script>
 
   <script>
+    function goBack(){
+      if(document.referrer && document.referrer !== location.href){
+        history.back();
+      }else{
+        location.href = "index.html";
+      }
+    }
+  </script>
+
+  <script>
     (function(){
       const root = document.documentElement;
       const saved = localStorage.getItem('jinsul-ysarang-onevisit-theme') || 'dark';
       root.setAttribute('data-theme', saved);
-      const btn = document.getElementById('themeToggle');
+      const btn = document.getElementById('floatingThemeToggle');
       function sync(){
-        if(btn) btn.textContent = root.getAttribute('data-theme') === 'light' ? '🌙 다크로 보기' : '☀️ 라이트로 보기';
+        if(btn) btn.textContent = root.getAttribute('data-theme') === 'light' ? '🌙 다크모드' : '☀️ 라이트모드';
       }
       sync();
       if(btn){
