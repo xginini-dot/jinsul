@@ -1,0 +1,3835 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>JINSUL - 비급여 분석 시스템 (v 1.0)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root { --blue: #228be6; --border: rgba(0, 0, 0, 0.1); --text: #1f2937; --gray: #868e96; }
+    * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #f8f9fa; color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    .version-tag { position: absolute; top: 10px; left: 10px; font-size: 10px; color: var(--gray); opacity: 0.5; font-weight: bold; }
+
+    .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 550px; opacity: 0.1; z-index: -1; pointer-events: none; filter: grayscale(1); }
+
+    header { padding: 40px 0 20px; text-align: center; }
+    header img { width: 180px; filter: grayscale(1) brightness(0.5); margin-bottom: 10px; }
+
+    .container { max-width: 1260px; margin: 0 auto; padding: 0 10px; flex: 1; width: 100%; }
+
+    .card { background: rgba(255, 255, 255, 0); padding: 14px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; }
+    .card h2 { margin: 0 0 10px; font-size: 16px; border-left: 4px solid var(--blue); padding-left: 10px; }
+
+    .drop-zone {border: 2px dashed #cbd5e1; padding: 26px; text-align: center; border-radius: 10px; background: rgba(255, 255, 255, 0.5); cursor: pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; box-sizing:border-box; min-height:96px; }
+    .drop-zone.active { border-color: var(--blue); background: rgba(34, 139, 230, 0.1); }
+
+    .cards-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    @media (max-width: 980px){ .cards-grid{ grid-template-columns: 1fr; } }
+
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 10px; }
+    .dash-item { background: #fff; padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+    .dash-item .val { font-size: 24px; font-weight: 800; color: var(--blue); }
+    .dash-item .sub { font-size: 11px; color: var(--gray); margin-top: 3px; }
+
+    .price-btn { padding: 5px 10px; border-radius: 6px; border: 1px solid #dee2e6; background: #fff; cursor: pointer; font-size: 12px; margin: 2px; transition: 0.2s; }
+    .price-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: bold; box-shadow: 0 2px 4px rgba(34, 139, 230, 0.3); }
+
+    .price-btn.excl-btn { border-style: dashed; }
+    .price-btn.excl-btn.active { background: var(--gray); color: #fff; border-color: var(--gray); box-shadow: none; font-weight: bold; }
+
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    @media (max-width: 980px){ .filter-grid{ grid-template-columns: 1fr; } }
+
+    table { width: 100%; border-collapse: collapse; background: transparent; table-layout: fixed; }
+    th { background: rgba(241, 243, 245, 0.85); padding: 7px 6px; border: 1px solid #dee2e6; text-align: center; font-size: 12px; }
+    td { padding: 7px 6px; border: 1px solid var(--border); font-size: 12px; text-align: center; }
+    .total-col { background: rgba(34, 139, 230, 0.1); font-weight: bold; }
+    .total-row td { background: rgba(34, 139, 230, 0.08); font-weight: bold; }
+    .hidden { display: none; }
+    .file-hidden{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+
+    footer { text-align: center; padding: 30px 20px; color: var(--gray); font-size: 0.95rem; font-weight: 500; width: 100%; position: relative; z-index: 10; }
+  
+    /* --- Added: Subtables & Follow-up summary --- */
+    .subtablesGrid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:12px; }
+    .miniCard{ border:1px solid #e9ecef; border-radius: 10px; background:#fff; padding:10px; }
+    .miniTitle{ font-weight:700; margin:0 0 6px 0; display:flex; justify-content:space-between; align-items:baseline; font-size:13px; }
+    .miniSub{ font-weight:500; color:#666; font-size:12px; }
+    .mini-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+    .mini-table th, .mini-table td{ padding:6px 6px; font-size:12px; }
+    .mini-table th{ white-space:nowrap; }
+    .table-scroll{ overflow-x:auto; }
+    .proposalWrap{ display:grid; grid-template-columns: 1fr; gap:12px; align-items:start; }
+    
+    .proposalPanel{ background: rgba(255,255,255,0.75); border:1px solid #d0ebff; border-radius: 12px; padding:12px; }
+@media (max-width: 900px){ .proposalWrap{ grid-template-columns: 1fr; } .subtablesGrid{ grid-template-columns: 1fr; } }
+    .followSummary{ background: rgba(255,255,255,0.75); border:1px solid #d0ebff; border-radius: 12px; padding:12px; }
+    .followSummary .title{ font-weight:700; margin-bottom:6px; }
+    .followSummary ol{ margin:0; padding-left:18px; }
+    .followSummary li{ margin:0 0 8px 0; }
+    .followSummary .meta{ font-size:12px; color:#555; margin-top:2px; }
+    .kpiLines div{ margin:0; }
+    
+  .cardHeaderRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.toggleBtn{ border:1px solid #cfe3ff; background:#fff; padding:6px 10px; border-radius:10px; font-size:12px; cursor:pointer; }
+.toggleBtn:hover{ background:#f8fbff; }
+.collapseWrap.collapsed{ display:none; }
+.kpiRowLabel{ font-weight:600; }
+
+
+/* Metric help modal */
+.modal-overlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,0.45);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  z-index:9999;
+}
+.modal{
+  background:#fff;
+  border-radius:14px;
+  max-width:900px;
+  width:100%;
+  max-height:85vh;
+  overflow:auto;
+  box-shadow:0 10px 30px rgba(0,0,0,0.25);
+}
+.modal-header{
+  position:sticky; top:0;
+  background:#fff;
+  padding:12px 16px;
+  border-bottom:1px solid #e9ecef;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.modal-title{ font-size:16px; font-weight:700; }
+.modal-close{
+  border:none;
+  background:transparent;
+  font-size:22px;
+  line-height:1;
+  cursor:pointer;
+  padding:4px 8px;
+}
+.modal-body{
+  padding:14px 16px 18px;
+  line-height:1.65;
+  font-size:13px;
+  color:#333;
+}
+.help-section h3{
+  margin:12px 0 8px;
+  font-size:14px;
+}
+.help-section ul{ margin:0; padding-left:18px; }
+.help-section li{ margin:6px 0; }
+
+
+    /* --- Mode selector (segmented control) --- */
+    .mode-bar{ display:flex; align-items:center; justify-content:center; gap:12px; margin-top:8px; flex-wrap:wrap; }
+    .mode-text{ font-size:12px; color:#6b7280; }
+    .mode-switch{
+      display:inline-flex; gap:4px; padding:4px;
+      background: rgba(255,255,255,0.65);
+      border:1px solid var(--border);
+      border-radius:999px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      backdrop-filter: blur(6px);
+    }
+    .mode-option{
+      position:relative;
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:7px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:12px;
+      font-weight:800;
+      color:#4b5563;
+      user-select:none;
+      transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+      white-space:nowrap;
+    }
+    .mode-option input{ position:absolute; opacity:0; pointer-events:none; }
+    .mode-option:hover{ background: rgba(34,139,230,0.10); }
+    .mode-option.active{
+      background: var(--blue);
+      color:#fff;
+      box-shadow: 0 2px 6px rgba(34,139,230,0.35);
+    }
+    .mode-option.active:hover{ background: var(--blue); }
+    @media (max-width: 520px){
+      .mode-text{ width:100%; text-align:center; }
+      .mode-switch{ width:100%; justify-content:space-between; }
+      .mode-option{ flex:1; }
+    }
+
+  
+
+/* ================= JINSUL Premium Design + Dark/Light Floating Controls ================= */
+:root{
+  --j-bg:#f7f4ef;
+  --j-bg2:#fbfaf8;
+  --j-card:rgba(255,253,250,.88);
+  --j-card-solid:#fffdfa;
+  --j-text:#20160f;
+  --j-muted:#786b5d;
+  --j-border:#e7ded3;
+  --j-gold:#bea98b;
+  --j-gold2:#9b8061;
+  --j-blue:#2563eb;
+  --j-shadow:0 18px 45px rgba(74,54,34,.10);
+  --j-soft:rgba(190,169,139,.12);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --j-bg:#080808;
+  --j-bg2:#161616;
+  --j-card:rgba(255,255,255,.075);
+  --j-card-solid:#171717;
+  --j-text:#f5efe5;
+  --j-muted:#b8b1a7;
+  --j-border:rgba(190,169,139,.24);
+  --j-gold:#d4bd95;
+  --j-gold2:#bea98b;
+  --j-blue:#60a5fa;
+  --j-shadow:0 24px 60px rgba(0,0,0,.42);
+  --j-soft:rgba(190,169,139,.14);
+  color-scheme:dark;
+}
+
+body{
+  background:
+    radial-gradient(circle at top center, rgba(190,169,139,.20), transparent 34%),
+    linear-gradient(135deg, var(--j-bg2), var(--j-bg) 48%, rgba(190,169,139,.16)) !important;
+  color:var(--j-text) !important;
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",system-ui,sans-serif !important;
+  transition:background .25s ease,color .25s ease;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(190,169,139,.10), transparent 30%),
+    radial-gradient(circle at 86% 18%, rgba(96,165,250,.08), transparent 30%);
+  pointer-events:none;
+  z-index:-2;
+}
+.version-tag{color:var(--j-muted)!important;z-index:20;}
+.watermark{opacity:.055!important;filter:grayscale(1)!important;z-index:-1!important;}
+header{
+  position:relative;
+  z-index:1;
+  margin:30px auto 18px;
+  padding:34px 22px 28px!important;
+  max-width:1260px;
+  width:calc(100% - 32px);
+  border:1px solid var(--j-border);
+  border-radius:28px;
+  background:linear-gradient(180deg,var(--j-card),rgba(255,255,255,.03));
+  box-shadow:var(--j-shadow);
+  backdrop-filter:blur(14px);
+}
+header img{width:220px!important;max-width:70%;filter:drop-shadow(0 14px 28px rgba(0,0,0,.20))!important;margin-bottom:14px!important;}
+#appTitle{color:var(--j-gold)!important;letter-spacing:.04em;}
+#reportTitle{color:var(--j-text)!important;font-size:24px!important;letter-spacing:-.03em;}
+.container{position:relative;z-index:1;max-width:1280px!important;padding:0 18px 34px!important;}
+.card,.dash-item,.miniCard,.proposalPanel,.followSummary,.modal,.mode-switch{
+  background:var(--j-card)!important;
+  border:1px solid var(--j-border)!important;
+  box-shadow:var(--j-shadow)!important;
+  backdrop-filter:blur(12px);
+  color:var(--j-text)!important;
+}
+.card{
+  border-radius:22px!important;
+  padding:18px!important;
+  margin-bottom:16px!important;
+}
+.card h2{
+  color:var(--j-text)!important;
+  border-left-color:var(--j-gold)!important;
+  font-size:17px!important;
+  letter-spacing:-.02em;
+}
+.drop-zone{
+  min-height:118px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  border:2px dashed rgba(190,169,139,.55)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.36),rgba(190,169,139,.10))!important;
+  color:var(--j-text)!important;
+  border-radius:18px!important;
+  transition:.22s ease;
+}
+.drop-zone:hover,.drop-zone.active{transform:translateY(-2px);border-color:var(--j-gold)!important;background:rgba(190,169,139,.17)!important;}
+#statusText{font-size:16px;color:var(--j-text)!important;}
+.dash-item{border-radius:18px!important;padding:16px 12px!important;}
+.dash-item .val{color:var(--j-gold)!important;font-weight:900!important;}
+.dash-item .sub,.mode-text,.miniSub,.small,.hint,footer{color:var(--j-muted)!important;}
+.filter-grid{gap:16px!important;}
+.price-btn,.toggleBtn,.btn{
+  border:1px solid var(--j-border)!important;
+  background:rgba(255,255,255,.58)!important;
+  color:var(--j-text)!important;
+  border-radius:12px!important;
+  font-weight:800!important;
+  transition:.2s ease!important;
+  box-shadow:none!important;
+}
+:root[data-theme="dark"] .price-btn,
+:root[data-theme="dark"] .toggleBtn,
+:root[data-theme="dark"] .btn{background:rgba(255,255,255,.07)!important;}
+.price-btn:hover,.toggleBtn:hover,.btn:hover{transform:translateY(-1px);border-color:var(--j-gold)!important;background:var(--j-soft)!important;}
+.price-btn.active,.mode-option.active{
+  background:linear-gradient(180deg,var(--j-gold),var(--j-gold2))!important;
+  border-color:var(--j-gold)!important;
+  color:#111!important;
+  box-shadow:0 8px 20px rgba(190,169,139,.20)!important;
+}
+.mode-option{color:var(--j-muted)!important;}
+.mode-option.active{color:#14110d!important;}
+table{background:transparent!important;color:var(--j-text)!important;}
+th{
+  background:rgba(190,169,139,.16)!important;
+  color:var(--j-text)!important;
+  border-color:var(--j-border)!important;
+}
+td{border-color:var(--j-border)!important;color:var(--j-text)!important;}
+.total-col,.total-row td{background:rgba(190,169,139,.14)!important;color:var(--j-text)!important;}
+.table-scroll, [style*="overflow-x:auto"]{border-radius:14px;}
+.modal-overlay{z-index:99998!important;}
+.modal-header{background:var(--j-card-solid)!important;border-bottom:1px solid var(--j-border)!important;color:var(--j-text)!important;}
+.modal-body{background:var(--j-card-solid)!important;color:var(--j-text)!important;}
+.modal-close{color:var(--j-text)!important;}
+#openMetricHelp{
+  position:fixed!important;
+  right:20px!important;
+  bottom:20px!important;
+  z-index:9998!important;
+  padding:12px 16px!important;
+  border-radius:999px!important;
+  background:linear-gradient(180deg,var(--j-gold),var(--j-gold2))!important;
+  color:#111!important;
+  box-shadow:0 14px 30px rgba(0,0,0,.20)!important;
+}
+footer{padding-bottom:72px!important;}
+
+.jinsulFloatingActions{
+  position:fixed;
+  top:18px;
+  right:20px;
+  display:flex;
+  gap:10px;
+  z-index:99999;
+  pointer-events:none;
+}
+.jinsulFloatBtn{
+  pointer-events:auto;
+  height:44px;
+  padding:0 16px;
+  border-radius:16px;
+  border:1px solid rgba(190,169,139,.42);
+  background:rgba(255,255,255,.72);
+  color:#2b2117;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  box-shadow:0 12px 28px rgba(0,0,0,.16);
+  backdrop-filter:blur(16px);
+  transition:.22s ease;
+  white-space:nowrap;
+}
+:root[data-theme="dark"] .jinsulFloatBtn{
+  background:rgba(20,20,20,.74);
+  color:#f5efe5;
+  box-shadow:0 12px 32px rgba(0,0,0,.38);
+}
+.jinsulFloatBtn:hover{
+  transform:translateY(-3px);
+  background:rgba(190,169,139,.20);
+  border-color:var(--j-gold);
+}
+@media(max-width:720px){
+  .jinsulFloatingActions{top:12px;right:12px;left:12px;justify-content:flex-end;}
+  .jinsulFloatBtn{height:40px;padding:0 12px;font-size:12px;border-radius:14px;}
+  header{margin-top:66px;width:calc(100% - 24px);border-radius:22px;}
+  #reportTitle{font-size:20px!important;}
+}
+@media print{.jinsulFloatingActions,#openMetricHelp{display:none!important;} header{box-shadow:none!important;}}
+
+</style>
+</head>
+<body>
+  <!-- JINSUL Floating Controls -->
+  <div class="jinsulFloatingActions" aria-label="페이지 이동 및 테마 전환">
+    <button class="jinsulFloatBtn" type="button" onclick="jinsulGoBack()">← 뒤로가기</button>
+    <button class="jinsulFloatBtn" type="button" id="jinsulThemeToggle" onclick="jinsulToggleTheme()">🌙 다크모드</button>
+  </div>
+
+  <div class="version-tag">v1.0</div>
+  <img src="진설로고.png" class="watermark" alt="bg" />
+  <header>
+    <img src="진설로고.png" alt="logo" />
+    <div style="display:flex; flex-direction:column; gap:2px;">
+      <div id="appTitle" style="font-weight: 800; font-size: 14px;">JINSUL - 비급여 분석 시스템 (v 1.0)</div>
+      <div id="reportTitle" style="font-weight: bold; font-size: 18px;">비급여 치료 전략 분석 리포트</div>
+      <div class="mode-bar">
+        <div id="modeText" class="mode-text">현재 모드: <span id="modeValue">-</span></div>
+        <div id="modeControls" class="mode-switch" aria-label="모드 선택">
+          <label class="mode-option"><input type="radio" name="jinsulMode" value="ESWT" />ESWT(충격파)</label>
+          <label class="mode-option"><input type="radio" name="jinsulMode" value="DOSU" />DOSU(도수치료)</label>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <label class="drop-zone" id="dropZone" for="fileInput">
+        <strong id="statusText">데이터 업로드 (드래그/클릭)</strong>
+        <input type="file" id="fileInput" class="file-hidden" accept=".csv, .xlsx, .xls" />
+      </label>
+    </div>
+
+    <div id="dashArea" class="dashboard-grid hidden">
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">신환 수</div>
+        <div id="v-count" class="val">0</div>
+        <div id="v-count-sub" class="sub"></div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">2회차 전환율</div>
+        <div id="v-conv" class="val">0%</div>
+        <div id="v-conv-sub" class="sub"></div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">3회차 도달율</div>
+        <div id="v-ret" class="val">0%</div>
+        <div id="v-ret-sub" class="sub"></div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">주사치료 병행 비율</div>
+        <div id="v-combo" class="val">0%</div>
+        <div id="v-combo-sub" class="sub"></div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">평균 치료 횟수</div>
+        <div id="v-avgV" class="val">0.0</div>
+        <div class="sub">치료일 기준</div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">중간값 치료 횟수</div>
+        <div id="v-medV" class="val">0</div>
+        <div class="sub">치료일 기준</div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">가장 흔한 치료 횟수(최빈값)</div>
+        <div id="v-modeV" class="val">-</div>
+        <div id="v-modeV-sub" class="sub"></div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">7일 내 재방문율</div>
+        <div id="v-r7" class="val">0%</div>
+        <div id="v-r7-sub" class="sub"></div>
+      </div>
+      <div class="dash-item">
+        <div style="font-size:12px;color:var(--gray);">14일 내 재방문율</div>
+        <div id="v-r14" class="val">0%</div>
+        <div id="v-r14-sub" class="sub"></div>
+      </div>
+</div>
+
+    <div id="filterArea" class="card hidden">
+  <h2>치료 금액 선택</h2>
+  <div class="filter-grid">
+    <div>
+      <div style="font-size:13px;color:var(--gray);margin-bottom:6px;">포함할 치료 금액 (단일 선택)</div>
+      <div id="priceBtns"></div>
+    </div>
+    <div>
+      <div style="font-size:13px;color:var(--gray);margin-bottom:6px;">제외할 치료 금액 (복수 선택)</div>
+      <div id="excludeBtns"></div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px;">※ 제외된 금액으로 시작한 신환은 분석에서 제외됩니다.</div>
+    </div>
+    <div>
+      <div style="font-size:13px;color:var(--gray);margin-bottom:6px;">서비스로 볼 치료 금액 (복수 선택)</div>
+      <div id="serviceBtns"></div>
+      <div style="font-size:12px;color:var(--gray);margin-top:4px;">※ 선택한 금액은 “서비스/무료”로 분류되어 <b>서비스 → 유료 전환</b> 지표(표 1-3~1-6)에 반영됩니다.</div>
+    </div>
+  </div>
+</div>
+
+<div id="mainContent" class="hidden">
+      <div class="cards-grid">
+      <div class="card"><h2>표 1. 부위별 치료 횟수</h2><div style="overflow-x:auto;"><table id="table1"></table></div></div>
+
+      <div class="card"><h2>표 1-0. 부위별 요약(당월 신환 기준)</h2><div style="overflow-x:auto;"><table id="table1_summary"></table></div></div>
+
+      <div class="card"><h2>표 1-1. 치료사별·부위별 치료 횟수</h2><div style="overflow-x:auto;"><table id="table1a"></table></div></div>
+
+      <div class="card"><h2>표 1-1A. 치료사별·부위별 환자당 평균 치료 횟수</h2><div style="overflow-x:auto;"><table id="table1a_avg"></table></div></div>
+      <div class="card"><h2>표 1-2. 치료사별·부위별 치료 비율</h2><div style="overflow-x:auto;"><table id="table1b"></table></div></div>
+      <div class="card free-card-main"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;"><h2 style="margin:0;">표 1-3. 서비스(선택 금액) → 유료 전환 (기타→신환/재진) (전체)</h2><button id="freeToggleBtn" class="price-btn" type="button">펼치기</button></div><div id="freeTablesMain" style="overflow-x:auto;margin-top:8px;"><table id="table1c"></table></div></div>
+      <div class="card free-card-extra"><h2>표 1-4. 서비스(선택 금액) → 유료 전환 (연령대별)</h2><div style="overflow-x:auto;"><table id="table1d"></table></div></div>
+      <div class="card free-card-extra"><h2>표 1-5. 서비스(선택 금액) → 유료 전환 (부위별)</h2><div style="overflow-x:auto;"><table id="table1e"></table></div></div>
+      <div class="card free-card-extra"><h2>표 1-6. 서비스(선택 금액) → 유료 전환 (치료사별)</h2><div style="overflow-x:auto;"><table id="table1f"></table></div></div>
+      <div class="card"><h2>표 1-7. 치료사별·부위별 3회차 도달율</h2><div style="overflow-x:auto;"><table id="table1g"></table></div></div>
+
+      <div class="card"><h2>표 2. 신환 상세 통계 및 재진 전환율</h2><div style="overflow-x:auto;"><table id="table2"></table></div></div>
+<div class="card"><h2>표 3. 연령대별 치료 건수 (성별 비중 포함)</h2><div style="overflow-x:auto;"><table id="table3"></table></div></div>
+<div class="card"><h2>표 5. 치료 횟수 분포</h2><div style="overflow-x:auto;"><table id="table5"></table></div></div>
+      <div class="card"><h2>표 6. 연령대별 치료 횟수 및 비율</h2><div style="overflow-x:auto;"><table id="table6"></table></div></div>
+      <div class="card"><h2>표 6-1. 연령대별 회차 도달률 (누적)</h2><div style="overflow-x:auto;"><table id="table6_1"></table></div></div>
+<div class="card"><h2>표 7. 치료 금액 구간별 핵심지표</h2><div style="overflow-x:auto;"><table id="table7"></table></div></div>
+      <div class="card"><h2>표 8. 치료사별 핵심지표</h2><div style="overflow-x:auto;"><table id="table8"></table></div></div>
+      <div class="card"><h2>표 8-1. 치료사별 신환/재진 예약 비율(당월 신환 기준)</h2><div style="overflow-x:auto;"><table id="table8r"></table></div></div>
+      <div class="card"><h2>표 8-2. 치료사별 신환/재진 예약 비율(기존 재진 포함)</h2><div style="overflow-x:auto;"><table id="table8r2"></table></div></div>
+      <div class="card"><h2>표 9. 첫 치료 → 2회차 재방문 주기</h2><div style="overflow-x:auto;"><table id="table9"></table></div></div>
+
+      <div class="card"><h2>표 9-1. 치료사별 첫 치료 → 2회차 재방문 주기</h2>
+        <div id="table9_1_container"></div>
+      </div>
+<div class="card"><h2>표 10. 진료실별 핵심지표</h2><div style="overflow-x:auto;"><table id="table10"></table></div></div>
+      <div class="card"><h2>표 11. 치료사별·연령대별 평균 치료 횟수</h2><div style="overflow-x:auto;"><table id="table11"></table></div></div>
+      <div class="card"><h2>표 12. 치료사별·연령대별 치료 횟수 분포</h2><div id="table12"></div></div>
+
+            <div class="card" id="card13">
+  <div class="cardHeaderRow">
+    <h2>표 13. 치료사별·연령대별 재방문 안내 연락 시점 및 예약 확인(권장)</h2>
+    <button id="toggle13" class="toggleBtn" type="button">펼치기</button>
+  </div>
+  <div id="table13Wrap" class="collapseWrap collapsed">
+    <div id="table13"></div>
+    <div id="followSummary13" class="followSummary" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<div class="card" style="background: rgba(231, 245, 255, 0.6);">
+        <h2>병원 경영 전략 제안서</h2>
+        <div class="proposalWrap"><div id="analysisText" class="proposalPanel" style="line-height:1.7; font-size:13px; color:#333; padding: 12px;"></div></div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© JINSUL · 경험과 가치를 현실화하는 컨설팅</footer>
+
+  
+      <button class="btn" id="openMetricHelp" type="button" style="position:fixed; right:16px; bottom:16px; z-index:9998;">
+  지표 설명
+</button>
+
+<div id="metricHelpModal" class="modal-overlay" aria-hidden="true" style="display:none;">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="지표 설명">
+    <div class="modal-header">
+      <div class="modal-title">지표/용어/표 설명</div>
+      <button class="modal-close" id="closeMetricHelp" type="button" aria-label="닫기">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="metricHelpContent"></div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    // ---------------- Mode (ESWT/DOSU) UI (labels only) ----------------
+    const MODE_KEY = "jinsul_report_mode";
+    const MODE_LABEL = { ESWT: "ESWT(충격파)", DOSU: "DOSU(도수치료)" };
+
+    function getMode() {
+      return localStorage.getItem(MODE_KEY) || "ESWT";
+    }
+    function setMode(mode) {
+      localStorage.setItem(MODE_KEY, mode);
+      applyModeToUI();
+    }
+    function applyModeToUI() {
+      const mode = getMode();
+      const mv = document.getElementById("modeValue");
+      if (mv) mv.textContent = MODE_LABEL[mode] || mode;
+
+      const reportTitle = document.getElementById("reportTitle");
+      if (reportTitle) reportTitle.textContent = `비급여 치료 전략 분석 리포트 (${MODE_LABEL[mode] || mode})`;
+
+      // Browser tab + app title (keep version as-is in the header)
+      const appTitleEl = document.getElementById("appTitle");
+      const appTitleText = appTitleEl ? appTitleEl.textContent : "JINSUL - 비급여 분석 시스템";
+      document.title = appTitleText;
+
+      // Sync radios + segmented UI
+      document.querySelectorAll('input[name="jinsulMode"]').forEach(r => {
+        r.checked = (r.value === mode);
+        const lbl = r.closest('label');
+        if (lbl) lbl.classList.toggle('active', r.checked);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Init radio events
+      document.querySelectorAll('input[name="jinsulMode"]').forEach(r => {
+        r.addEventListener("change", () => setMode(r.value));
+      });
+      applyModeToUI();
+    });
+    // -------------------------------------------------------------------
+
+
+
+
+
+    // ---- Percent formatter (global) ----
+    // Rule: round to integer %, but <=1% shows 1 decimal; 0 -> '-'
+    function _pctToStr(p){
+      if(p===null || p===undefined) return '-';
+      let pct = Number(p);
+      if(!isFinite(pct)) return '-';
+      if(pct <= 1) pct = pct * 100; // fraction -> percent
+      if(pct <= 0) return '-';
+      if(pct <= 1){
+        const v = Math.round(pct*10)/10;
+        const shown = (v===0 ? 0.1 : v);
+        return shown.toFixed(1) + '%';
+      }
+      return Math.round(pct) + '%';
+    }
+    var fmtPct = (typeof fmtPct === 'function') ? fmtPct : _pctToStr;
+    var ffmtPct = (typeof ffmtPct === 'function') ? ffmtPct : _pctToStr;
+    let freeExpanded = false; // (declared early to avoid TDZ during init)
+
+    // ---- formatter guard (prevents render crash) ----
+    var fmtPct = (typeof fmtPct === 'function') ? fmtPct : function(x){
+      if(!isFinite(x)) return '-';
+      const pct = x*100;
+      if(pct<=0) return '-';
+      if(pct<=1) return pct.toFixed(1) + '%';
+      return Math.round(pct) + '%';
+    };
+    var fmtPct0 = (typeof fmtPct0 === 'function') ? fmtPct0 : function(x){ return fmtPct(x); };
+
+
+
+
+    // -----------------------------
+    // 0) UI 이벤트
+    // -----------------------------
+    const dz = document.getElementById('dropZone');
+    const fi = document.getElementById('fileInput');
+
+    // 전역 드래그 기본동작 방지 (드롭 시 브라우저가 파일을 열어버리는 현상 방지)
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', e => {
+      e.preventDefault();
+      const f = getDroppedFile(e.dataTransfer);
+      if(f) handleFile(f);
+    });
+
+function getDroppedFile(dt){
+      if(!dt) return null;
+      if(dt.files && dt.files.length) return dt.files[0];
+      if(dt.items){
+        for(const it of dt.items){
+          if(it && it.kind === 'file') return it.getAsFile();
+        }
+      }
+      return null;
+    }
+
+    fi.onchange = e => handleFile(e.target.files && e.target.files[0]);
+
+    
+    // 클릭 업로드 보장
+    dz.addEventListener('click', () => fi && fi.click());
+
+    // Free(기타여부) 표 펼치기/접기
+    const freeToggleBtn = document.getElementById('freeToggleBtn');
+    if(freeToggleBtn){
+      freeToggleBtn.addEventListener('click', () => setFreeSectionExpanded(!freeExpanded));
+    }
+    // 기본은 접기
+    setFreeSectionExpanded(false);
+
+// 표 13 펼치기/접기
+    const toggle13Btn = document.getElementById('toggle13');
+    const table13Wrap = document.getElementById('table13Wrap');
+    if(toggle13Btn && table13Wrap){
+      toggle13Btn.addEventListener('click', ()=>{
+        const nowCollapsed = table13Wrap.classList.toggle('collapsed');
+        toggle13Btn.textContent = nowCollapsed ? '펼치기' : '접기';
+      });
+    }
+
+
+    ['dragenter','dragover'].forEach(n => dz.addEventListener(n, e => { e.preventDefault(); dz.classList.add('active'); }));
+    ['dragleave','drop'].forEach(n => dz.addEventListener(n, e => { e.preventDefault(); dz.classList.remove('active'); }));
+    dz.addEventListener('drop', e => handleFile(getDroppedFile(e.dataTransfer)));
+
+    // -----------------------------
+    // 1) 전역 상태
+    // -----------------------------
+    let rawRows = [];
+    let records = [];     // row-level cleaned
+    let patientsAll = []; // patient-level aggregated (전체)
+    let selPVal = -1;     // selected entry price
+    let entryPriceList = [];
+    let amountListAll = [];
+    let amountListFree = [];
+    let exclAmtSet = new Set();
+    let exclAmtFreeSet = new Set();
+    let serviceAmtSet = new Set(); // 서비스(무료로 간주할) 치료 금액 (복수 선택)
+
+    const AGE_BUCKETS = ['10대','20대','30대','40대','50대','60대','70대 이상','미상'];
+
+    // Global parts list for service conversion tables (표 1-5) to avoid block-scoped PARTS/PARTS_BASE issues
+    const _PARTS_FOR_SERVICE = ['목','등','허리','어깨','팔꿈치','손목/손','골반/고관절','무릎','발목/발','기타'];
+
+    const GENDERS = ['남','여','미상'];
+
+    function toStr(v){ return (v===null||v===undefined) ? "" : String(v); }
+    function normKey(k){ return toStr(k).trim(); }
+    
+    // 헤더 자동 매핑 강화: 병합/깨짐/2줄 헤더 대응
+    function _hNorm(s){
+      return toStr(s).toLowerCase()
+        .replace(/\s+/g,'')
+        .replace(/[()（）\[\]{}]/g,'')
+        .replace(/[·•\-\_\/\\\.]/g,'')
+        .replace(/:+/g,'')
+        .replace(/__empty\d*/g,'');
+    }
+
+    const _COL_SYNONYMS = [
+      {std:'번호', syn:['번호','no','#','순번']},
+      {std:'치료사', syn:['치료사','담당치료사','담당자','시술자','therapist']},
+      {std:'이름', syn:['이름','환자명','성명','성함','name']},
+      {std:'환자 차트', syn:['환자차트','환자 차트','차트','차트번호','차트 번호','등록번호','환자번호','chart']},
+      {std:'성별/연령', syn:['성별/연령','성별연령','성별·연령','성별','연령','나이','sexage']},
+      {std:'신/재', syn:['신/재','신재','신환/재진','신환재진','구분','초재진']},
+      {std:'치료부위', syn:['치료부위','부위','시술부위','치료 부위','부위명']},
+      {std:'치료타입', syn:['치료타입','치료 타입','치료내용','시술','오더','처치','치료종류']},
+      {std:'회차', syn:['회차','차수','치료회차','치료 회차','횟수','회']},
+      {std:'금액', syn:['금액','치료금액','수납','결제','청구','amount','price']},
+      {std:'방문일', syn:['방문일','내원일','진료일','치료일','방문 일자','date']},
+      {std:'등록일', syn:['등록일','접수일','수납일','등록 일자']},
+      {std:'예약', syn:['예약','예약여부','예약 여부','예약여부(o/x)']},
+      {std:'진료실', syn:['진료실','실','room','진료실/구역']},
+      {std:'비고', syn:['비고','메모','특이사항','note']},
+    ];
+    function getBySyn(row, syns){
+      try{
+        for(const s of (syns||[])){
+          if(row && row[s]!==undefined && row[s]!==null){
+            const v = String(row[s]).trim();
+            if(v!=='') return row[s];
+          }
+        }
+        // fallback: scan keys with normalized match
+        const synNorm = new Set((syns||[]).map(s=>_hNorm(s)));
+        for(const k of Object.keys(row||{})){
+          if(synNorm.has(_hNorm(k))){
+            const v = row[k];
+            if(v!==undefined && v!==null && String(v).trim()!=='') return v;
+          }
+        }
+      }catch(e){}
+      return '';
+    }
+
+
+    function _stdKeyFromHeader(h){
+      const hn=_hNorm(h);
+      if(!hn) return '';
+      for(const item of _COL_SYNONYMS){
+        for(const s of item.syn){
+          const sn=_hNorm(s);
+          if(!sn) continue;
+          if(hn===sn || hn.includes(sn) || sn.includes(hn)){
+            return item.std;
+          }
+        }
+      }
+      return '';
+    }
+
+    function _padRows(rows, maxCols){
+      for(let r=0;r<rows.length;r++){
+        if(!Array.isArray(rows[r])) rows[r]=[];
+        for(let c=rows[r].length;c<maxCols;c++) rows[r][c]='';
+      }
+    }
+
+    function _applyMergesToRows(rows, merges, maxRow){
+      if(!merges || !merges.length) return;
+      merges.forEach(m=>{
+        const r0=m.s.r, r1=m.e.r, c0=m.s.c, c1=m.e.c;
+        if(r0>=maxRow) return;
+        const v = (rows[r0] && rows[r0][c0]!==undefined) ? rows[r0][c0] : '';
+        if(v===undefined || v===null || toStr(v).trim()==='') return;
+        for(let rr=r0; rr<=Math.min(r1, maxRow-1); rr++){
+          for(let cc=c0; cc<=c1; cc++){
+            const cur = rows[rr][cc];
+            if(cur===undefined || cur===null || toStr(cur).trim()==='') rows[rr][cc]=v;
+          }
+        }
+      });
+    }
+
+    function _scoreHeaderRow(headers){
+      let s=0;
+      headers.forEach(h=>{
+        const std=_stdKeyFromHeader(h);
+        if(std) s+=3;
+        const hn=_hNorm(h);
+        if(hn && hn.length>=2) s+=0.2;
+      });
+      return s;
+    }
+
+    function _detectHeader(rows){
+      const scan = Math.min(20, rows.length);
+      let best = {score:-1, idx:0, span:1, headers:[]};
+      for(let i=0;i<scan;i++){
+        const h1 = rows[i].map(v=>toStr(v).trim());
+        const s1 = _scoreHeaderRow(h1);
+        if(s1>best.score){ best={score:s1, idx:i, span:1, headers:h1}; }
+        if(i+1<scan){
+          const h2 = rows[i].map((v,ci)=>{
+            const a=toStr(v).trim();
+            const b=toStr(rows[i+1][ci]).trim();
+            if(a && b && a!==b) return (a+' '+b).trim();
+            return (a || b).trim();
+          });
+          const s2 = _scoreHeaderRow(h2) + 0.3; // 2줄 결합 우선
+          if(s2>best.score){ best={score:s2, idx:i, span:2, headers:h2}; }
+        }
+      }
+      return best;
+    }
+
+    function sheetToObjectsAuto(sheet){
+      try{
+        const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:""});
+        if(!rows || !rows.length) return [];
+        const maxCols = rows.reduce((m,r)=>Math.max(m, Array.isArray(r)?r.length:0), 0);
+        _padRows(rows, maxCols);
+        const merges = sheet['!merges'] || [];
+        _applyMergesToRows(rows, merges, Math.min(20, rows.length));
+
+        const hdr = _detectHeader(rows);
+        const headers = hdr.headers;
+        const colMap = new Map();
+        headers.forEach((h,ci)=>{
+          const std = _stdKeyFromHeader(h);
+          if(std) colMap.set(ci, std);
+        });
+
+        // fallback: 첫 컬럼은 대개 '번호'
+        if(!Array.from(colMap.values()).includes('번호') && maxCols){
+          colMap.set(0, '번호');
+        }
+
+        const out=[];
+        const start = hdr.idx + hdr.span;
+        for(let r=start; r<rows.length; r++){
+          const arr = rows[r];
+          if(!arr) continue;
+          if(!arr.some(v=>toStr(v).trim()!=='')) continue;
+          const obj={};
+          for(const [ci,std] of colMap.entries()){
+            obj[std] = arr[Number(ci)] ?? "";
+          }
+          out.push(obj);
+        }
+        return out;
+      }catch(err){
+        console.error('sheetToObjectsAuto failed', err);
+        return [];
+      }
+    }
+function num(v){
+      const n = parseInt(toStr(v).replace(/[^0-9]/g,''),10);
+      return isFinite(n) ? n : 0;
+    }
+
+    function moneyOrNull(v){
+      // 금액 파싱: 숫자가 전혀 없으면 null(없음)로 처리 (공란을 0원으로 만들지 않기 위함)
+      if(v===null || v===undefined) return null;
+      if(typeof v === 'number' && isFinite(v)) return Math.round(v);
+      const digits = toStr(v).replace(/[^0-9]/g,'');
+      if(!digits) return null;
+      const n = parseInt(digits,10);
+      return isFinite(n) ? n : null;
+    }
+
+    function normalizeType(v){
+      const s = toStr(v).replace(/\s+/g,'').replace(/,+/g,'').trim();
+      return s;
+    }
+    function isShock(t){ return normalizeType(t).includes('충격파'); }
+    function isInjection(t){ const s=normalizeType(t); return s.includes('주사'); }
+    function isManual(t){ return normalizeType(t).includes('도수'); }
+
+    function parseVisitDate(v){
+      // returns Date or null
+      if(v===null || v===undefined || v==="") return null;
+
+      // number: could be yyyymmdd (e.g., 20251101.0) or excel serial (e.g., 45200)
+      if(typeof v === 'number' && isFinite(v)){
+        const iv = Math.floor(v);
+        const s = String(iv);
+        if(s.length === 8 && iv > 19000101 && iv < 20991231){
+          const y = parseInt(s.slice(0,4),10);
+          const m = parseInt(s.slice(4,6),10)-1;
+          const d = parseInt(s.slice(6,8),10);
+          const dt = new Date(y,m,d);
+          return isFinite(dt.getTime()) ? dt : null;
+        }
+        // excel serial heuristic
+        if(iv > 20000 && iv < 60000){
+          const base = new Date(Date.UTC(1899,11,30)); // Excel epoch
+          const dt = new Date(base.getTime() + iv * 86400000);
+          return isFinite(dt.getTime()) ? new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()) : null;
+        }
+      }
+
+      // string formats
+      const s0 = toStr(v).trim();
+      if(!s0) return null;
+
+      // yyyymmdd as string
+      const s = s0.replace(/\s+/g,'');
+      if(/^\d{8}(\.0+)?$/.test(s)){
+        const s8 = s.slice(0,8);
+        const y = parseInt(s8.slice(0,4),10);
+        const m = parseInt(s8.slice(4,6),10)-1;
+        const d = parseInt(s8.slice(6,8),10);
+        const dt = new Date(y,m,d);
+        return isFinite(dt.getTime()) ? dt : null;
+      }
+
+      // yyyy-mm-dd / yyyy/mm/dd
+      const m1 = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+      if(m1){
+        const y = parseInt(m1[1],10);
+        const mo = parseInt(m1[2],10)-1;
+        const d = parseInt(m1[3],10);
+        const dt = new Date(y,mo,d);
+        return isFinite(dt.getTime()) ? dt : null;
+      }
+
+      const dt = new Date(s0);
+      return isFinite(dt.getTime()) ? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()) : null;
+    }
+
+
+    function normalizeRecords(recs){
+      // 방문(환자+방문일+치료타입+회차+치료사) 단위로 묶어서,
+      // 금액이 비어있는 행(부위가 분리 출력된 행)에도 같은 방문 금액을 전파한다.
+      const g = new Map();
+      const keyOf = (r)=>[r.key, r.therapist||'', String(r.visitKey||''), normalizeType(r.typeRaw||''), toStr(r.round||'')].join('||');
+      for(const r of recs){
+        const k = keyOf(r);
+        if(!g.has(k)) g.set(k, []);
+        g.get(k).push(r);
+      }
+      for(const rows of g.values()){
+        const amts = rows.map(x=>x.amount).filter(v=>isFinite(v) && v>0);
+        const a = amts.length ? Math.max(...amts) : null;
+        if(a!==null){
+          rows.forEach(x=>{ if(x.amount===null || x.amount===undefined || x.amount===0) x.amount = a; });
+        }
+        const t = rows.map(x=>toStr(x.typeRaw).trim()).find(v=>v) || '';
+        const rd = rows.map(x=>toStr(x.round).trim()).find(v=>v) || '';
+        const nf = rows.map(x=>toStr(x.newFlag).trim()).find(v=>v) || '';
+        const rv = rows.map(x=>toStr(x.reserve).trim()).find(v=>v) || '';
+        const rm = rows.map(x=>toStr(x.room).trim()).find(v=>v) || '';
+        rows.forEach(x=>{
+          if(!toStr(x.typeRaw).trim()) x.typeRaw = t;
+          if(!toStr(x.round).trim()) x.round = rd;
+          if(!toStr(x.newFlag).trim()) x.newFlag = nf;
+          if(!toStr(x.reserve).trim()) x.reserve = rv;
+          if(!toStr(x.room).trim()) x.room = rm;
+        });
+      }
+      return recs;
+    }
+
+
+    function dateKey(d){
+      if(!d) return null;
+      const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      return dd.getTime();
+    }
+
+    function parseGender(sexAge){
+      const s = toStr(sexAge);
+      if(s.includes('남')) return '남';
+      if(s.includes('여')) return '여';
+      return '미상';
+    }
+    function parseAgeBucket(sexAge){
+      const s = toStr(sexAge);
+      const m = s.match(/(\d{1,3})/);
+      if(!m) return '미상';
+      const age = parseInt(m[1],10);
+      if(!isFinite(age)) return '미상';
+      if(age < 20) return '10대';
+      if(age < 30) return '20대';
+      if(age < 40) return '30대';
+      if(age < 50) return '40대';
+      if(age < 60) return '50대';
+      if(age < 70) return '60대';
+      return '70대 이상';
+    }
+
+    
+function mapPartSingle(partRaw){ const s=toStr(partRaw).trim().replace(/\s+/g,'').replace(/[，]/g,'').replace(/,+/g,'').replace(/[.]+$/,''); const has=(w)=>s.includes(w); if(has('손가락')||has('수지')||has('손목')||has('손')) return '손목/손'; if(has('발가락')||has('족지')||has('발목')||has('발')) return '발목/발'; if(has('경추')||has('목')) return '목'; if(has('흉추')||(has('등')&&!has('허리'))) return '등'; if(has('요추')||has('허리')) return '허리'; if(has('어깨')||has('견')) return '어깨'; if(has('팔꿈치')||has('주관절')) return '팔꿈치'; if(has('고관절')||has('골반')||has('둔부')||has('엉덩')||has('서혜')) return '골반/고관절'; if(has('무릎')||has('슬관절')) return '무릎'; return '기타'; }
+
+function extractParts(partRaw){
+  const s0 = toStr(partRaw).trim();
+  if(!s0) return ['(미기입)'];
+  if(s0==='(미기입)' || s0.includes('미기입')) return ['(미기입)'];
+
+  const s = s0
+    .replace(/\n/g, ',')
+    .replace(/[\/／]/g, ',')
+    .replace(/[·•]/g, ',')
+    .replace(/\s*및\s*/g, ',')
+    .replace(/&/g, ',');
+
+  const tokens = s.split(',').map(x=>x.trim()).filter(Boolean);
+  const out = [];
+  const push = (v)=>{ if(v && !out.includes(v)) out.push(v); };
+
+  if(tokens.length){
+    tokens.forEach(t=>{
+      const m = mapPartSingle(t);
+      push(m || '기타');
+    });
+  }else{
+    const m = mapPartSingle(s0);
+    push(m || '기타');
+  }
+
+  return out.length ? out : ['(미기입)'];
+}
+
+function fmtPct(x){
+      if(!isFinite(x)) return '-';
+      const pct = x*100;
+      if(pct<=0) return '-';
+      if(pct<=1) return pct.toFixed(1) + '%';
+      return Math.round(pct) + '%';
+    }
+    function fmtPct0(x){ return fmtPct(x); }
+function fmtInt(x){ if(!isFinite(x)) return '-'; const v=Math.round(x); return v===0 ? '-' : v.toLocaleString(); }
+    
+    
+    function fmtCount(x, unit){
+      if(!isFinite(x)) return '-';
+      const v = Math.round(x);
+      if(v===0) return '-';
+      return v.toLocaleString() + (unit||'');
+    }
+    function fmtMoney(x){
+      if(!isFinite(x)) return '-';
+      const v = Math.round(x);
+      if(v===0) return '-';
+      return v.toLocaleString() + '원';
+    }
+    function fmtFloat(x, d=2){
+      if(!isFinite(x)) return '-';
+      if(x===0) return '-';
+      return x.toFixed(d);
+    }
+// 0 값(지표/표)을 '-'로 표시 (0/82 같은 분수는 유지)
+    function replaceZeroIndicators(){
+      const root = document.getElementById('dashArea') || document.body;
+      const nodes = root.querySelectorAll('td, th, .kpi-value, .stat, .metric, .value, .big, .big-number');
+      nodes.forEach(el=>{
+        const t0 = (el.textContent||'').trim();
+        if(!t0) return;
+        if(t0.includes('/')) return; // 분수 표기 유지
+        // 정확히 0 계열만 치환
+        if(/^0(\.0+)?$/.test(t0)) { el.textContent='-'; return; }
+        if(/^0(\.0+)?%$/.test(t0)) { el.textContent='-'; return; }
+        if(/^0(\.0+)?(명|원|회|일)$/.test(t0)) { el.textContent='-'; return; }
+      });
+    }
+function median(arr){
+      const a = arr.slice().sort((x,y)=>x-y);
+      if(!a.length) return 0;
+      const mid = Math.floor(a.length/2);
+      return a.length%2 ? a[mid] : (a[mid-1]+a[mid])/2;
+    }
+
+    function modeInfo(arr){
+      const freq = new Map();
+      for(const v of (arr||[])){
+        const k = (v===null||v===undefined) ? null : Number(v);
+        if(!isFinite(k)) continue;
+        freq.set(k, (freq.get(k)||0) + 1);
+      }
+      if(!freq.size) return {modes:[], maxFreq:0};
+      let maxF = 0;
+      for(const c of freq.values()) maxF = Math.max(maxF, c);
+      const modes = Array.from(freq.entries()).filter(([k,c])=>c===maxF).map(([k])=>k).sort((a,b)=>a-b);
+      return {modes, maxFreq:maxF};
+    }
+
+
+    // -----------------------------
+    // 2) 파일 로드 -> 정규화 -> 환자 집계
+    // -----------------------------
+    function handleFile(file){
+      if(!file) return;
+      document.getElementById('statusText').textContent = `로드됨: ${file.name}`;
+
+      const r = new FileReader();
+      r.onload = e => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        rawRows = sheetToObjectsAuto(sheet);
+        if(!rawRows || !rawRows.length){
+          // fallback: 기존 방식
+          rawRows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+        }
+buildData();
+        selPVal = -1;
+        buildPriceButtons();
+        buildExcludeButtons();
+        buildServiceButtons();
+        renderAll();
+      replaceZeroIndicators();
+        };
+      r.readAsArrayBuffer(file);
+    }
+
+    function buildData(){
+      // 1) 키 정리
+      const cleaned = rawRows.map(row => {
+        const out = {};
+        Object.keys(row||{}).forEach(k => out[normKey(k)] = row[k]);
+
+        // (중요) 헤더가 조금이라도 달라도 표준 키로 다시 매핑하여 누락(특히 '환자 차트')을 방지
+        try{
+          const idx = new Map();
+          Object.keys(out).forEach(k => idx.set(_hNorm(k), k));
+          const stdRow = {};
+          (_COL_SYNONYMS||[]).forEach(({std, syn})=>{
+            for(const s of (syn||[])){
+              const kk = idx.get(_hNorm(s));
+              if(kk!==undefined){
+                stdRow[std] = out[kk];
+                break;
+              }
+            }
+          });
+          return Object.assign({}, out, stdRow);
+        }catch(e){
+          return out;
+        }
+      });
+
+      // 2) 치료사/환자 컨텍스트 ffill
+      let ctx = { therapist:'', name:'', chart:'', sexAge:'', newFlag:'', visitDt:null, typeRaw:'', round:'', room:'' };
+
+      const recs = [];
+      for(const r of cleaned){
+        const no = toStr(r['번호']).trim();
+        if(no && no.includes('치료사') && no.includes('환자')){
+          // ex) "김기목 치료사 환자 현황"
+          const t = no.split('치료사')[0].trim();
+          ctx.therapist = t || ctx.therapist;
+          ctx.name = '';
+          ctx.chart = '';
+          ctx.sexAge = '';
+          ctx.newFlag = '';
+          ctx.visitDt = null;
+          ctx.typeRaw = '';
+          ctx.round = '';
+          ctx.room = '';
+          continue; // 헤더 행 제외
+        }
+
+        const name = toStr(r['이름']).trim();
+        if(name){
+          // 이름이 바뀌는 시점(새 환자 시작)에는 이전 환자의 값(특히 신/재=기타여부)이 누수되지 않도록 컨텍스트를 리셋
+          if(ctx.name && name !== ctx.name){
+            ctx.chart = '';
+            ctx.sexAge = '';
+            ctx.newFlag = '';
+            ctx.visitDt = null;
+            ctx.typeRaw = '';
+            ctx.round = '';
+            ctx.room = '';
+            // ctx.therapist is preserved across patient rows
+          }
+          ctx.name = name;
+          const cRaw = getBySyn(r, ['환자 차트','환자차트','차트','차트번호','차트 번호','등록번호','환자번호','chart']);
+          const c = toStr(cRaw).replace(/[^0-9]/g,'').trim();
+          if(c) ctx.chart = c;
+          const sa = toStr(r['성별/연령']).trim();
+          if(sa) ctx.sexAge = sa; else ctx.sexAge = '';
+          const nf = toStr(r['신/재']).trim();
+          if(nf) ctx.newFlag = nf; else ctx.newFlag = '';
+        }
+
+        // 실제 데이터가 거의 없는 빈 행은 스킵
+        const rowData = toStr(r['치료부위']).trim()
+          || toStr(r['치료타입']).trim()
+          || toStr(r['치료차수']).trim()
+          || toStr(r['금액']).trim()
+          || toStr(r['방문일']).trim()
+          || toStr(r['등록일']).trim()
+          || toStr(r['진료실']).trim()
+          || toStr(r['예약']).trim()
+          || toStr(r['비고']).trim();
+        if(!ctx.name || !rowData) continue;
+
+        let visitDt = parseVisitDate(r['방문일']);
+        if(visitDt) ctx.visitDt = visitDt;
+        else visitDt = ctx.visitDt || null;
+        const vk = dateKey(visitDt);
+
+        let rt = toStr(r['치료타입']).trim();
+        if(rt) ctx.typeRaw = rt;
+        else rt = ctx.typeRaw || '';
+
+        let round = toStr(r['치료차수']).trim();
+        if(round) ctx.round = round;
+        else round = ctx.round || '';
+
+        let room = toStr(r['진료실']).trim();
+        if(room) ctx.room = room;
+        else room = ctx.room || '';
+
+        const amt = moneyOrNull(r['금액']);
+
+        const sexAgeCell = toStr(r['성별/연령']).trim();
+        if(sexAgeCell) ctx.sexAge = sexAgeCell;
+        const sexAge = sexAgeCell || ctx.sexAge;
+        const newFlagCell = toStr(r['신/재']).trim();
+        if(newFlagCell) ctx.newFlag = newFlagCell;
+        const newFlag = newFlagCell || ctx.newFlag;
+
+        const chartRaw2 = getBySyn(r, ['환자 차트','환자차트','차트','차트번호','차트 번호','등록번호','환자번호','chart']);
+
+        const chart = toStr(chartRaw2).replace(/[^0-9]/g,'').trim() || ctx.chart;
+
+        const reserveRaw = toStr(r['예약']).trim();
+        const reserveVal = (()=>{
+          const v = reserveRaw ? reserveRaw.toUpperCase() : '';
+          return (v==='O' || v==='X') ? v : '';
+        })();
+
+        recs.push({
+          therapist: ctx.therapist || '미상',
+          name: ctx.name,
+          chart: chart,
+          key: (chart ? (chart+'|'+ctx.name) : (ctx.name + '|' + (ctx.sexAge||'') + '|' + (ctx.therapist||''))),
+          sexAge: sexAge,
+          gender: parseGender(sexAge),
+          ageBucket: parseAgeBucket(sexAge),
+          newFlag: newFlag,
+          part: toStr(r['치료부위']).trim() || '(미기입)',
+          typeRaw: rt,
+          type: normalizeType(rt),
+          amount: amt,
+          visitKey: vk,
+          visitDate: visitDt,
+          reserve: reserveVal,
+          room: room,
+          round: round
+        });
+      }
+
+      records = normalizeRecords(recs);
+
+      patientsAll = computePatientsFrom(records);
+
+      // 치료 금액(첫 충격파 치료금액) 후보는 데이터에 따라 유동적입니다.
+      amountListAll = Array.from(new Set(
+        patientsAll.filter(p=>p.isNew)
+          .map(p=>p.entryPrice)
+          .filter(v=>isFinite(v) && v>0)
+      )).sort((a,b)=>a-b);
+
+      // 기타여부(Free) 시작 신환의 진입금액 후보
+      amountListFree = Array.from(new Set(
+        patientsAll.filter(p=>p.freeStart)
+          .map(p=>p.freeEntryPrice)
+          .filter(v=>isFinite(v) && v>=0)
+      )).sort((a,b)=>a-b);
+
+      
+
+      // 서비스 금액 기본값: 기존 Free(기타여부/0원) 시작 금액들을 서비스로 자동 선택
+      serviceAmtSet = new Set((amountListFree||[]));
+exclAmtSet = new Set();
+      exclAmtFreeSet = new Set();
+      const hasFreeStart = patientsAll.some(p=>p.freeStart);
+      setFreeSectionExpanded(hasFreeStart);
+      rebuildDerived();
+}
+
+    function computePatientsFrom(sourceRecords){
+      const byP = new Map();
+      for(const row of (sourceRecords||[])){
+        if(!row.key) continue;
+        if(!byP.has(row.key)) byP.set(row.key, []);
+        byP.get(row.key).push(row);
+      }
+
+      const pats = [];
+      for(const [pkey, rows] of byP.entries()){
+        const any = rows[0];
+        const isNew = rows.some(r => toStr(r.newFlag).includes('신환'));
+        const hasShock = rows.some(r => isShock(r.typeRaw));
+        const hasInj = rows.some(r => isInjection(r.typeRaw));
+        const hasMan = rows.some(r => isManual(r.typeRaw));
+
+        // 무료→유료 전환(기타여부 → 신환/재진) 계산 (방문일 기준, '첫 상태=기타'일 때만)
+        const rowsSortedByDay = rows.slice().sort((a,b)=>{
+          const ak = isFinite(a.visitKey) ? a.visitKey : Number.POSITIVE_INFINITY;
+          const bk = isFinite(b.visitKey) ? b.visitKey : Number.POSITIVE_INFINITY;
+          if(ak===bk){
+            return (a.__rowIndex||0) - (b.__rowIndex||0);
+          }
+          return ak - bk;
+        });
+
+        const finiteKeys = rowsSortedByDay.map(r=>r.visitKey).filter(v=>isFinite(v));
+        const minVisitKey = finiteKeys.length ? Math.min(...finiteKeys) : Number.POSITIVE_INFINITY;
+        const firstDayRows = (minVisitKey!==Number.POSITIVE_INFINITY)
+          ? rowsSortedByDay.filter(r=>r.visitKey===minVisitKey)
+          : (rowsSortedByDay.length ? [rowsSortedByDay[0]] : []);
+
+        const firstStatusRow = firstDayRows.find(r => toStr(r.newFlag).trim()) || firstDayRows[0] || null;
+        const firstStatus = firstStatusRow ? toStr(firstStatusRow.newFlag) : '';
+
+        const firstDayAmounts = firstDayRows.map(r=>r.amount).filter(v=>isFinite(v));
+        const firstDayMaxAmt = firstDayAmounts.length ? Math.max(...firstDayAmounts) : (firstStatusRow && isFinite(firstStatusRow.amount) ? firstStatusRow.amount : null);
+
+        // 무료(기타여부) 시작(첫 방문 기준) = (첫 방문일의 상태가 '기타여부') 또는 (첫 방문일 금액이 0원)
+        const freeStart = firstStatus.includes('기타여부') || (firstDayMaxAmt===0);
+        const freeStartKey = (minVisitKey!==Number.POSITIVE_INFINITY) ? minVisitKey : (firstStatusRow && isFinite(firstStatusRow.visitKey) ? firstStatusRow.visitKey : null);
+let freeConverted = false;
+        let freeConversionTo = null;
+        let freeConversionKey = null;
+
+        if(freeStart && freeStartKey!==null){
+          for(const r of rowsSortedByDay){
+            if(!isFinite(r.visitKey) || r.visitKey <= freeStartKey) continue;
+            const nf = toStr(r.newFlag);
+            if(nf.includes('신환')){
+              freeConverted = true;
+              freeConversionTo = '신환';
+              freeConversionKey = r.visitKey;
+              break;
+            }
+          }
+        }
+
+        const freeDaysToPaid = (freeConverted && freeConversionKey!==null && freeStartKey!==null)
+          ? Math.round((freeConversionKey - freeStartKey) / 86400000)
+          : null;
+
+        // Free(기타여부) 시작 금액(해당 방문일의 금액) — (기타) 금액 후보/제외용
+        let freeEntry = null;
+        if(freeStart && freeStartKey!==null){
+          const shRowsF = rows.filter(r => r.visitKey===freeStartKey && isShock(r.typeRaw));
+          const amF1 = shRowsF.map(r=>r.amount).filter(v=>isFinite(v));
+          freeEntry = amF1.length ? Math.max(...amF1) : null;
+          if(freeEntry===null){
+            const allRowsF = rows.filter(r => r.visitKey===freeStartKey);
+            const amF2 = allRowsF.map(r=>r.amount).filter(v=>isFinite(v));
+            freeEntry = amF2.length ? Math.max(...amF2) : null;
+          }
+        }
+
+        // ✅ 엑셀 기준 신환 귀속:
+        // - 치료사: '신환'으로 표시된 행의 치료사(섹션)로 귀속 (없으면 첫 행 치료사)
+        // - 기준 방문일/금액: '신환' 행의 방문일/금액을 우선 (없으면 기존 로직)
+        const newRows = rows.filter(r => toStr(r.newFlag).includes('신환'));
+        const newTherapist = (newRows.map(r=>toStr(r.therapist).trim()).find(v=>v) || '').trim();
+        const newVisitKey = (() => {
+          const ks = newRows.map(r=>r.visitKey).filter(Boolean).sort((a,b)=>a-b);
+          return ks.length ? ks[0] : null;
+        })();
+
+        const visitKeysAllRaw = new Set(rows.map(r=>r.visitKey).filter(Boolean));
+        const shockVisitKeysRaw = new Set(rows.filter(r=>isShock(r.typeRaw)).map(r=>r.visitKey).filter(Boolean));
+
+        // '충격파'가 명시되지 않은 행(예: 주사치료만 표기)도 엑셀에는 포함될 수 있으므로,
+        // 충격파 방문키가 없으면 전체 방문키를 치료(방문) 기준으로 사용합니다.
+        const primaryVisitKeysRaw = (shockVisitKeysRaw.size ? shockVisitKeysRaw : visitKeysAllRaw);
+
+        const allKeysRaw = Array.from(visitKeysAllRaw).sort((a,b)=>a-b);
+        const prKeysRaw  = Array.from(primaryVisitKeysRaw).sort((a,b)=>a-b);
+
+        // 신환 기준 시작일(신환 행의 방문일이 있으면 그날부터) — 없으면 기존 첫 방문일
+        const baseKey = (newVisitKey !== null) ? newVisitKey : (prKeysRaw.length ? prKeysRaw[0] : (allKeysRaw.length ? allKeysRaw[0] : null));
+
+const allKeys = (baseKey===null) ? allKeysRaw : allKeysRaw.filter(k=>k>=baseKey);
+        const prKeys  = (baseKey===null) ? prKeysRaw  : prKeysRaw.filter(k=>k>=baseKey);
+
+        const visitKeysAll = new Set(allKeys);
+        const primaryVisitKeys = new Set(prKeys);
+
+        const firstAll = allKeys.length ? allKeys[0] : null;
+        const firstPrimary = prKeys.length ? prKeys[0] : firstAll;
+
+        // 진입 금액(= 신환 첫 치료 금액)도 '신환' 행의 방문일을 우선
+        const entryKey = (newVisitKey !== null) ? newVisitKey : firstPrimary;
+
+        let entry = null;
+        if(entryKey !== null){
+          const shRows = rows.filter(r => r.visitKey===entryKey && isShock(r.typeRaw));
+          const am1 = shRows.map(r=>r.amount).filter(v=>isFinite(v));
+          entry = am1.length ? Math.max(...am1) : null;
+          if(entry===null){
+            const allRows = rows.filter(r => r.visitKey===entryKey);
+            const am2 = allRows.map(r=>r.amount).filter(v=>isFinite(v));
+            entry = am2.length ? Math.max(...am2) : null;
+          }
+        }
+
+        let entryRoom = '';
+        if(entryKey !== null){
+          entryRoom = rows.filter(r=>r.visitKey===entryKey).map(r=>toStr(r.room).trim()).find(v=>v) || '';
+        }
+
+        let daysTo2 = null;
+        if(prKeys.length >= 2){
+          daysTo2 = Math.max(0, Math.round((prKeys[1]-prKeys[0]) / 86400000));
+        }
+
+        pats.push({
+          key: pkey,
+          therapist: (newTherapist || any.therapist || '미상'),
+          name: any.name,
+          chart: any.chart,
+          gender: any.gender,
+          ageBucket: any.ageBucket,
+          isNew: isNew,
+          freeStart: freeStart,
+          freeConverted: freeConverted,
+          freeConversionTo: freeConversionTo,
+          freeDaysToPaid: freeDaysToPaid,
+          freeEntryPrice: freeEntry,
+          entryPrice: entry,
+          entryRoom: entryRoom,
+          visitCountAll: visitKeysAll.size,
+          shockVisitCountRaw: primaryVisitKeys.size,
+          shockVisitCount: primaryVisitKeys.size,
+          firstShockKey: firstPrimary,
+          daysTo2: daysTo2,
+          hasInjection: hasInj,
+          hasManual: hasMan,
+          rows: rows
+        });
+      }
+      return pats;
+    }
+
+    
+    function buildServiceButtons(){
+      const box = document.getElementById('serviceBtns');
+      if(!box) return;
+      box.innerHTML = '';
+
+      const mkBtn = (label, val) => {
+        const b = document.createElement('button');
+        b.className = 'price-btn svc-btn' + (serviceAmtSet.has(val) ? ' active' : '');
+        b.textContent = label;
+        b.onclick = () => {
+          if(serviceAmtSet.has(val)) serviceAmtSet.delete(val);
+          else serviceAmtSet.add(val);
+          buildServiceButtons();
+          renderAll();
+          replaceZeroIndicators();
+        };
+        return b;
+      };
+
+      const cand = Array.from(new Set([0, ...(amountListAll||[]), ...(amountListFree||[])]))
+        .filter(v=>isFinite(v) && v>=0)
+        .sort((a,b)=>a-b);
+
+      const clear = document.createElement('button');
+      clear.className = 'price-btn';
+      clear.textContent = '선택 해제';
+      clear.onclick = () => {
+        serviceAmtSet = new Set();
+        buildServiceButtons();
+        renderAll();
+        replaceZeroIndicators();
+      };
+      box.appendChild(clear);
+
+      cand.forEach(v => {
+        const isEtc = (amountListFree||[]).includes(v) || v===0;
+        const label = (v===0)
+          ? '0원(기타)'
+          : (v.toLocaleString() + '원' + (isEtc ? '(기타)' : ''));
+        box.appendChild(mkBtn(label, v));
+      });
+    }
+
+
+function patientsAfterFreeExclusion(){
+  const hasFree = (exclAmtFreeSet && exclAmtFreeSet.size);
+  if(!hasFree) return patientsAll.slice();
+
+  return patientsAll.filter(p => {
+    if(p.freeStart && isFinite(p.freeEntryPrice) && exclAmtFreeSet.has(p.freeEntryPrice)) return false;
+    return true;
+  });
+}
+
+function activePatients(){
+  // Free(기타여부) 시작 금액 제외는 전체에 적용
+  const base = patientsAfterFreeExclusion();
+
+  // 일반 금액(유료 진입금액) 제외는 유료(신환) 분석에만 적용
+  const hasNormal = (exclAmtSet && exclAmtSet.size);
+  if(!hasNormal) return base.slice();
+
+  return base.filter(p => {
+    if(!p.isNew || !isFinite(p.entryPrice)) return true;
+    if(exclAmtSet.has(p.entryPrice)) return false;
+    return true;
+  });
+}
+
+function rebuildDerived(){
+  const act = activePatients();
+  entryPriceList = Array.from(new Set(
+    act.filter(p=>p.isNew)
+      .map(p=>p.entryPrice)
+      .filter(v=>isFinite(v) && v>0)
+  )).sort((a,b)=>a-b);
+
+  // 선택 금액이 더 이상 존재하지 않으면 '전체'로 복귀
+  if(selPVal !== -1 && !entryPriceList.includes(selPVal)) selPVal = -1;
+}
+
+
+    // -----------------------------
+    // 3) 필터 버튼
+    // -----------------------------
+function buildPriceButtons(){
+      const box = document.getElementById('priceBtns');
+      box.innerHTML = '';
+
+      const mkBtn = (label, val) => {
+        const b = document.createElement('button');
+        b.className = 'price-btn sel-btn' + (selPVal===val ? ' active' : '');
+        b.textContent = label;
+        b.onclick = () => {
+          selPVal = val;
+          document.querySelectorAll('.sel-btn').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+          renderAll();
+      replaceZeroIndicators();
+        };
+        return b;
+      };
+
+      box.appendChild(mkBtn('전체', -1));
+      entryPriceList.forEach(v => box.appendChild(mkBtn(v.toLocaleString() + '원', v)));
+
+      document.getElementById('filterArea').classList.remove('hidden');
+    }
+
+    function buildExcludeButtons(){
+      const box = document.getElementById('excludeBtns');
+      if(!box) return;
+      box.innerHTML = '';
+
+      const mkBtn = (label, val, isFree) => {
+        const set = isFree ? exclAmtFreeSet : exclAmtSet;
+        const b = document.createElement('button');
+        b.className = 'price-btn excl-btn' + (set.has(val) ? ' active' : '');
+        b.textContent = label;
+        b.onclick = () => {
+          if(set.has(val)) set.delete(val);
+          else set.add(val);
+
+          rebuildDerived();
+          buildPriceButtons();
+          buildExcludeButtons();
+          renderAll();
+      replaceZeroIndicators();
+        };
+        return b;
+      };
+
+      // 일반 금액 후보(원 데이터 기준) + 현재 제외값 union
+      const unionNormal = Array.from(new Set([...(amountListAll||[]), ...Array.from(exclAmtSet||[])]))
+        .filter(v=>isFinite(v) && v>0)
+        .sort((a,b)=>a-b);
+
+      unionNormal.forEach(v => box.appendChild(mkBtn(v.toLocaleString() + '원', v, false)));
+
+      // 기타여부 금액 후보 + 현재 제외값 union
+      const unionFree = Array.from(new Set([...(amountListFree||[]), ...Array.from(exclAmtFreeSet||[])]))
+        .filter(v=>isFinite(v) && v>=0)
+        .sort((a,b)=>a-b);
+
+      unionFree.forEach(v => box.appendChild(mkBtn(v.toLocaleString() + '원(기타)', v, true)));
+
+      // 초기화
+      const clearBtn = document.createElement('button');
+      const anyActive = (exclAmtSet.size || exclAmtFreeSet.size);
+      clearBtn.className = 'price-btn excl-btn' + (anyActive ? '' : ' active');
+      clearBtn.textContent = '제외 초기화';
+      clearBtn.onclick = () => {
+        exclAmtSet = new Set();
+        exclAmtFreeSet = new Set();
+        rebuildDerived();
+        buildPriceButtons();
+        buildExcludeButtons();
+        buildServiceButtons();
+        renderAll();
+      replaceZeroIndicators();
+      };
+      box.appendChild(clearBtn);
+    }
+
+
+    // -----------------------------
+    // Free(기타여부) 표 펼치기/접기
+    // -----------------------------
+    function setFreeSectionExpanded(expanded){
+      freeExpanded = !!expanded;
+
+      const btn = document.getElementById('freeToggleBtn');
+      const main = document.getElementById('freeTablesMain');
+
+      if(btn) btn.textContent = freeExpanded ? '접기' : '펼치기';
+      if(main) main.style.display = freeExpanded ? '' : 'none';
+
+      document.querySelectorAll('.free-card-extra').forEach(el => {
+        el.style.display = freeExpanded ? '' : 'none';
+      });
+    }
+
+
+    // -----------------------------
+    // 4) 렌더링 헬퍼
+    // -----------------------------
+    function setHtml(id, html){ const el = document.getElementById(id); if(el) el.innerHTML = html; }
+
+    function renderKeyValueTable(tableId, rows){
+      // rows: [{k, v}]
+      const h = `<thead><tr><th style="width:180px;">항목</th><th>값</th></tr></thead><tbody>` +
+        rows.map(r=>`<tr><td>${r.k}</td><td>${r.v}</td></tr>`).join('') +
+        `</tbody>`;
+      setHtml(tableId, h);
+    }
+
+    function renderSimpleTable(tableId, cols, rows){
+      // cols: [{k:'field', l:'label', w?:number}]
+
+      // --- Overall/Total cell auto-fill (counts, averages, percentages) ---
+      function _strip(v){ return String(v||'').replace(/<[^>]*>/g,'').trim(); }
+      function _numFrom(v){
+        const s=_strip(v).replace(/,/g,'');
+        const m=s.match(/-?\d+(?:\.\d+)?/);
+        return m?parseFloat(m[0]):null;
+      }
+      function _isBlank(v){
+        const s=_strip(v);
+        return !s || s==='-';
+      }
+      function _detectUnit(samples){
+        let unit='';
+        for(const s0 of samples){
+          const s=_strip(s0);
+          if(!s) continue;
+          if(s.includes('원')) return '원';
+          if(s.includes('회')) unit = unit || '회';
+          if(s.includes('명')) unit = unit || '명';
+          if(s.includes('건')) unit = unit || '건';
+          if(s.includes('일')) unit = unit || '일';
+          if(s.includes('%')) unit = unit || '%';
+        }
+        return unit;
+      }
+      function _weightKeyFor(colKey){
+        if(!cols) return null;
+        let wKey=null;
+        for(const c of cols){
+          if(c.k===colKey) break;
+          const l=String(c.l||'');
+          if(/환자|대상|건수|명|분모|모수|N/i.test(l)) wKey = c.k;
+        }
+        return wKey;
+      }
+      function _overallFor(colKey, label, bodyRows, totalRowObj){
+        const isPct = /율|비중|%|도달/.test(label);
+        const wKey = _weightKeyFor(colKey);
+        const samples=[];
+        let sum=0, n=0;
+        let sumW=0, sumVW=0;
+        for(const r of bodyRows){
+          if(!r || r===totalRowObj) continue;
+          const vRaw = r[colKey];
+          if(vRaw===null || vRaw===undefined) continue;
+          const s=_strip(vRaw);
+          if(!s || s==='-') continue;
+          samples.push(s);
+          let v=_numFrom(s);
+          if(v===null) continue;
+          if(isPct && s.includes('%')) v = v/100.0;
+          // weight
+          let w = null;
+          if(wKey){
+            const wRaw = r[wKey];
+            w = _numFrom(wRaw);
+            if(!(w>0)) w = null;
+          }
+          if(w!==null){
+            sumW += w;
+            sumVW += v * w;
+          }else{
+            sum += v;
+            n += 1;
+          }
+        }
+        if(isPct){
+          let p = null;
+          if(sumW>0) p = sumVW / sumW;
+          else if(n>0) p = sum / n;
+          if(p===null || !isFinite(p)) return {text:'-', unit:'%'};
+          const pct = (p*100);
+          return {text: pct.toFixed(1)+'%', unit:'%'};
+        }else{
+          let avg = null;
+          if(sumW>0) avg = sumVW / sumW;
+          else if(n>0) avg = sum / n;
+          if(avg===null || !isFinite(avg)) return {text:'-', unit:''};
+          const unit = _detectUnit(samples);
+          if(unit==='원') return {text: Math.round(avg).toLocaleString()+'원', unit:'원'};
+          if(unit==='명') return {text: avg.toFixed(2)+'명', unit:'명'};
+          if(unit==='회') return {text: avg.toFixed(2)+'회', unit:'회'};
+          if(unit==='일') return {text: avg.toFixed(1)+'일', unit:'일'};
+          return {text: (Math.abs(avg)%1>0 ? avg.toFixed(2) : String(Math.round(avg))), unit:unit};
+        }
+      }
+      // cols: [{k:'field', l:'label', w?:number}]
+      const thead = `<thead><tr>` + cols.map(c=>{
+        const w = c.w ? ` style="width:${c.w}px"` : '';
+        return `<th${w}>${c.l}</th>`;
+      }).join('') + `</tr></thead>`;
+
+      const bodyRows = (rows||[]).slice();
+
+      // If the caller already supplied a total row, do not auto-generate another.
+      const firstKey = cols && cols[0] ? cols[0].k : null;
+      const hasTotalRow = bodyRows.some(r=>{
+        if(!r) return false;
+        const cls = String(r._rowClass||'');
+        const firstVal = firstKey ? String(r[firstKey]||'') : '';
+        return cls.includes('total') || firstVal.includes('총 합계');
+      });
+
+      // If a total row already exists but is empty ('-' / ''), fill additive columns automatically.
+      const totalRowIndex = bodyRows.findIndex(r=>{
+        if(!r) return false;
+        const cls = String(r._rowClass||'');
+        const firstVal = firstKey ? String(r[firstKey]||'') : '';
+        return cls.includes('total') || firstVal.includes('총 합계');
+      });
+      if(totalRowIndex >= 0 && firstKey){
+        const tr = bodyRows[totalRowIndex];
+        let clsName = String(tr._rowClass||'');
+        if(!clsName.includes('total-row')) tr._rowClass = (clsName ? (clsName + ' ') : '') + 'total-row';
+
+        cols.slice(1).forEach(c=>{
+          const cur = (tr[c.k]!==null && tr[c.k]!==undefined) ? String(tr[c.k]).trim() : '';
+          if(cur && cur !== '-') return;
+
+          const label = String(c.l||c.k||'');
+          if(/설명|텍스트|분포/.test(label)){
+            tr[c.k] = '-';
+            return;
+          }
+          if(/율|비중|%|평균|중간|최빈|도달|소요일|주기|기간/.test(label)){
+            const ov = _overallFor(c.k, label, bodyRows, tr);
+            tr[c.k] = ov.text;
+            return;
+          }
+
+          let _sum = 0;
+          let _hasNum = false;
+          let _hasFloat = false;
+
+          for(const rr of bodyRows){
+            if(!rr || rr===tr) continue;
+            let v = rr[c.k];
+            if(v===null || v===undefined || v==='') continue;
+            let s = String(v).replace(/<[^>]*>/g,'').trim();
+            if(!s) continue;
+            if(s.includes('%')){ _hasNum = false; _sum = 0; break; }
+            s = s.replace(/,/g,'');
+            if(s.includes('/') || s.includes('신환') || s.includes('재진')) continue;
+            const nm = s.match(/-?\d+(\.\d+)?/);
+            if(!nm) continue;
+            _hasNum = true;
+            if(nm[0].includes('.')) _hasFloat = true;
+            _sum += parseFloat(nm[0]);
+          }
+
+          if(!_hasNum){
+            tr[c.k] = '-';
+          }else{
+            let unit = '';
+            for(const rr2 of bodyRows){
+              if(!rr2 || rr2===tr) continue;
+              const vv = rr2[c.k];
+              if(vv===null || vv===undefined || vv==='') continue;
+              const ss = String(vv).replace(/<[^>]*>/g,'');
+              if(ss.includes('원')){ unit='원'; break; }
+              if(ss.includes('명')){ unit='명'; }
+              if(ss.includes('회')){ unit='회'; }
+            }
+            if(unit==='원') tr[c.k] = Math.round(_sum).toLocaleString() + '원';
+            else if(unit==='명') tr[c.k] = Math.round(_sum).toLocaleString() + '명';
+            else if(unit==='회') tr[c.k] = (_hasFloat ? _sum.toFixed(2) : Math.round(_sum).toLocaleString()) + '회';
+            else tr[c.k] = (_hasFloat ? _sum.toFixed(2) : Math.round(_sum).toLocaleString());
+          }
+        });
+      }
+
+
+      if(!hasTotalRow && bodyRows.length && firstKey){
+        const totalRow = {_rowClass:'total-row'};
+        totalRow[firstKey] = '총 합계';
+
+        cols.slice(1).forEach(c=>{
+          const label = String(c.l||c.k||'');
+          // Non-additive columns: keep blank.
+          if(/설명|텍스트|분포/.test(label)){
+            totalRow[c.k] = '-';
+            return;
+          }
+          if(/율|비중|%|평균|중간|최빈|도달|소요일|주기|기간/.test(label)){
+            const ov = _overallFor(c.k, label, bodyRows, null);
+            totalRow[c.k] = ov.text;
+            return;
+          }
+
+          let sum = 0;
+          let hasNum = false;
+          let hasFloat = false;
+
+          for(const r of bodyRows){
+            if(!r) continue;
+            let v = r[c.k];
+            if(v===null || v===undefined || v==='') continue;
+
+            // strip simple tags
+            let s = String(v).replace(/<[^>]*>/g,'').trim();
+            if(!s) continue;
+            if(s.includes('%')){ hasNum = false; sum = 0; break; }
+
+            // extract number
+            s = s.replace(/,/g,'');
+            if(s.includes('/') || s.includes('신환') || s.includes('재진')) continue;
+            const nm = s.match(/-?\d+(\.\d+)?/);
+            if(!nm) continue;
+
+            hasNum = true;
+            if(nm[0].includes('.')) hasFloat = true;
+            sum += parseFloat(nm[0]);
+          }
+
+          if(!hasNum){
+            totalRow[c.k] = '-';
+          }else{
+            // detect unit from sample values
+            let unit = '';
+            for(const r2 of bodyRows){
+              if(!r2) continue;
+              const vv = r2[c.k];
+              if(vv===null || vv===undefined || vv==='') continue;
+              const ss = String(vv).replace(/<[^>]*>/g,'');
+              if(ss.includes('원')){ unit='원'; break; }
+              if(ss.includes('명')){ unit='명'; }
+              if(ss.includes('회')){ unit = unit || '회'; }
+              if(ss.includes('건')){ unit = unit || '건'; }
+            }
+            if(unit==='원') totalRow[c.k] = fmtMoney(sum);
+            else if(unit) totalRow[c.k] = fmtCount(sum, unit);
+            else totalRow[c.k] = hasFloat ? sum.toFixed(2) : fmtInt(Math.round(sum));
+          }
+        });
+
+        bodyRows.push(totalRow);
+      }
+
+      const tbody = `<tbody>` + bodyRows.map(r=>{
+        let clsName = (r && r._rowClass) ? String(r._rowClass) : '';
+        const firstVal = (r && firstKey) ? String(r[firstKey]||'') : '';
+        if(firstVal.includes('총 합계') && !clsName.includes('total-row')) clsName = (clsName? (clsName+' ') : '') + 'total-row';
+        const cls = clsName ? ` class="${clsName}"` : '';
+        return `<tr${cls}>` + cols.map(c=>{
+          const v = (r && (r[c.k]!==null && r[c.k]!==undefined)) ? r[c.k] : '';
+          return `<td>${v}</td>`;
+        }).join('') + `</tr>`;
+      }).join('') + `</tbody>`;
+
+      setHtml(tableId, thead + tbody);
+    }
+
+
+    function renderFollowSummary(rows, elementId='followSummary13'){
+      const el = document.getElementById(elementId);
+      if(!el) return;
+
+      const items = (rows||[]).filter(r=>{
+        return r && r['치료사'] && r['치료사']!=='총 합계' && !(toStr(r['비고']).includes('표본 적음')) && (r._n||0) >= 5;
+      }).map(r=>{
+        const medTxt = (r._med===null || r._med===undefined) ? '-' : (Math.round(r._med)+'일');
+        return {
+          t: r['치료사'],
+          a: r['연령대'],
+          rec: r['권장 연락'],
+          one: r._oneRate||0,
+          r7: r._r7||0,
+          med: medTxt,
+          n: r._n||0,
+          score: (r._score||0)
+        };
+      }).sort((a,b)=>b.score-a.score).slice(0,5);
+
+      if(items.length===0){
+        el.innerHTML = `<div class="title">재방문 관리 요약</div><div class="muted">표본이 부족해 요약을 만들 수 없습니다 (n≥5 기준).</div>`;
+        return;
+      }
+      const li = items.map(x=>`<li><b>${x.t} / ${x.a}</b><div class="meta">${x.rec}</div><div class="meta">1회만 내원 ${fmtPct(x.one)} · 7일 내 재방문율 ${fmtPct(x.r7)} · 2회차 주기 ${x.med} · n=${fmtInt(x.n)}</div></li>`).join('');
+      el.innerHTML = `<div class="title">재방문 관리 요약 (우선순위 Top ${items.length})</div><ol>${li}</ol>`;
+    }
+
+
+    function renderMatrix(tableId, rowLabels, colLabels, getVal){
+      // Adds both row totals (right) and column totals (bottom)
+      const head = `<thead><tr><th style="width:110px;">구분</th>` +
+        colLabels.map(c=>`<th>${c}</th>`).join('') +
+        `<th class="total-col">총 합계</th></tr></thead>`;
+
+      const colTotals = new Array(colLabels.length).fill(0);
+      let grand = 0;
+
+      let body = `<tbody>`;
+      rowLabels.forEach((rLabel, ri) => {
+        let rowSum = 0;
+        let cells = '';
+        colLabels.forEach((cLabel, ci) => {
+          const v = getVal(rLabel, cLabel) || 0;
+          rowSum += v;
+          colTotals[ci] += v;
+          cells += `<td>${v ? v : '-'}</td>`;
+        });
+        grand += rowSum;
+        body += `<tr><td>${rLabel}</td>${cells}<td class="total-col">${fmtInt(rowSum)}</td></tr>`;
+      });
+
+      // totals row
+      body += `<tr class="total-row"><td>총 합계</td>` +
+        colTotals.map(v=>`<td>${v ? v : '-'}</td>`).join('') +
+        `<td class="total-col">${fmtInt(grand)}</td></tr>`;
+
+      body += `</tbody>`;
+      setHtml(tableId, head + body);
+    }
+
+
+    // 표 1(부위별) 등: 렌더된 매트릭스 테이블의 우측에 "평균" 컬럼을 추가
+    // - denomMap: rowLabel -> 분모(환자 수 등)
+    // - totals는 기존 total-col 값을 사용
+    function appendAvgColToMatrix(tableId, denomMap, headerLabel){
+      const table = document.getElementById(tableId);
+      if(!table) return;
+      const headTr = table.querySelector('thead tr');
+      if(headTr){
+        const th = document.createElement('th');
+        th.className = 'avg-col';
+        th.textContent = headerLabel || '평균';
+        headTr.appendChild(th);
+      }
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(tr=>{
+        const labelTd = tr.querySelector('td');
+        const label = labelTd ? labelTd.textContent.trim() : '';
+        const td = document.createElement('td');
+        td.className = 'avg-col';
+        if(label === '총 합계'){
+          // 전체(총 합계) 평균: (총 치료횟수 합) / (총 분모 합)  ※가중평균
+          const denomSum = (() => {
+            let s = 0;
+            if(denomMap && denomMap.get){
+              rows.forEach(tr2=>{
+                const l2td = tr2.querySelector('td');
+                const l2 = l2td ? l2td.textContent.trim() : '';
+                if(!l2 || l2==='총 합계') return;
+                s += (denomMap.get(l2)||0);
+              });
+            }
+            return s;
+          })();
+          const totalTd2 = tr.querySelector('td.total-col');
+          const total2 = totalTd2 ? (parseInt(String(totalTd2.textContent||'0').replace(/,/g,''),10)||0) : 0;
+          td.textContent = denomSum ? (total2 / denomSum).toFixed(2) : '-';
+          if(denomSum) td.title = `총 ${total2}회 / ${denomSum}명`;
+          tr.appendChild(td);
+          return;
+        }
+        const denom = denomMap && denomMap.get ? (denomMap.get(label)||0) : 0;
+        const totalTd = tr.querySelector('td.total-col');
+        const total = totalTd ? (parseInt(String(totalTd.textContent||'0').replace(/,/g,''),10)||0) : 0;
+        td.textContent = denom ? (total / denom).toFixed(2) : '-';
+        if(denom) td.title = `총 ${total}회 / ${denom}명`;
+        tr.appendChild(td);
+      });
+    }
+
+    // Percent matrix with totals (uses numerator/denominator).
+    // getNum(r,c): numerator count, getDen(r,c): denominator count
+    function renderMatrixPctTotals(tableId, rowLabels, colLabels, getNum, getDen){
+      const head = `<thead><tr><th style="width:110px;">구분</th>` +
+        colLabels.map(c=>`<th>${c}</th>`).join('') +
+        `<th class="total-col">총 합계</th></tr></thead>`;
+      const colNum = new Array(colLabels.length).fill(0);
+      const colDen = new Array(colLabels.length).fill(0);
+      let grandNum = 0, grandDen = 0;
+      let body = `<tbody>`;
+      rowLabels.forEach(r=>{
+        let rowNum=0, rowDen=0;
+        let cells='';
+        colLabels.forEach((c,ci)=>{
+          const den = getDen(r,c) || 0;
+          const num = getNum(r,c) || 0;
+          rowDen += den; rowNum += num;
+          colDen[ci] += den; colNum[ci] += num;
+          cells += den ? `<td>${fmtPct(num/den)}</td>` : `<td>-</td>`;
+        });
+        grandNum += rowNum; grandDen += rowDen;
+        const rowTot = rowDen ? fmtPct(rowNum/rowDen) : '-';
+        body += `<tr><td>${r}</td>${cells}<td class="total-col">${rowTot}</td></tr>`;
+      });
+      body += `<tr class="total-row"><td>총 합계</td>` +
+        colLabels.map((c,ci)=> (colDen[ci] ? `<td>${fmtPct(colNum[ci]/colDen[ci])}</td>` : `<td>-</td>`)).join('') +
+        `<td class="total-col">${grandDen ? fmtPct(grandNum/grandDen) : '-'}</td></tr>`;
+      body += `</tbody>`;
+      setHtml(tableId, head + body);
+    }
+
+    function renderMatrixNoTotals(tableId, rowLabels, colLabels, getCell){
+      const head = `<thead><tr><th style="width:110px;">구분</th>` + colLabels.map(c=>`<th>${c}</th>`).join('') + `</tr></thead>`;
+      let body = `<tbody>`;
+      rowLabels.forEach(r=>{
+        let cells='';
+        colLabels.forEach(c=>{ cells += `<td>${getCell(r,c)}</td>`; });
+        body += `<tr><td>${r}</td>${cells}</tr>`;
+      });
+      body += `</tbody>`;
+      setHtml(tableId, head + body);
+    }
+
+
+    
+    // Count + % matrix with totals (row totals, column totals, grand total).
+    function renderMatrixCountPctTotals(tableId, rowLabels, colLabels, getCount, rowTotalMap){
+      const head = `<thead><tr><th style="width:110px;">구분</th>` +
+        colLabels.map(c=>`<th>${c}</th>`).join('') +
+        `<th class="total-col">총 합계</th></tr></thead>`;
+
+      const colTotals = new Array(colLabels.length).fill(0);
+      let grand = 0;
+      let body = `<tbody>`;
+
+      rowLabels.forEach(r=>{
+        const rowTot = rowTotalMap && rowTotalMap.get ? (rowTotalMap.get(r)||0) : 0;
+        let cells = '';
+        colLabels.forEach((c, ci)=>{
+          const cnt = getCount(r,c) || 0;
+          colTotals[ci] += cnt;
+          const pct = rowTot ? fmtPct(cnt/rowTot) : '-';
+          cells += rowTot ? `<td>${fmtInt(cnt)} / ${pct}</td>` : `<td>-</td>`;
+        });
+        grand += rowTot;
+        body += `<tr><td>${r}</td>${cells}<td class="total-col">${fmtInt(rowTot)}</td></tr>`;
+      });
+
+      body += `<tr class="total-row"><td>총 합계</td>` +
+        colTotals.map(v=>{
+          const pct = grand ? fmtPct(v/grand) : '-';
+          return `<td>${fmtInt(v)} / ${pct}</td>`;
+        }).join('') +
+        `<td class="total-col">${fmtInt(grand)}</td></tr>`;
+
+      body += `</tbody>`;
+      setHtml(tableId, head + body);
+    }
+
+    // Average matrix with totals (weighted by patient count).
+    // getTot(r,c): total visits (sum), getN(r,c): patient count (n)
+    function renderMatrixAvgTotals(tableId, rowLabels, colLabels, getTot, getN){
+      const head = `<thead><tr><th style="width:110px;">구분</th>` +
+        colLabels.map(c=>`<th>${c}</th>`).join('') +
+        `<th class="total-col">총 합계</th></tr></thead>`;
+
+      const colTot = new Array(colLabels.length).fill(0);
+      const colN   = new Array(colLabels.length).fill(0);
+      let grandTot = 0, grandN = 0;
+
+      let body = `<tbody>`;
+      rowLabels.forEach(r=>{
+        let rowTot = 0, rowN = 0;
+        let cells = '';
+        colLabels.forEach((c, ci)=>{
+          const tot = getTot(r,c) || 0;
+          const n   = getN(r,c) || 0;
+          rowTot += tot; rowN += n;
+          colTot[ci] += tot; colN[ci] += n;
+          const v = n ? `<span title="${tot}회 / ${n}명">${(tot/n).toFixed(2)}</span>` : '-';
+          cells += `<td>${v ? v : '-'}</td>`;
+        });
+        grandTot += rowTot; grandN += rowN;
+        const rowV = rowN ? `<span title="${rowTot}회 / ${rowN}명">${(rowTot/rowN).toFixed(2)}</span>` : '-';
+        body += `<tr><td>${r}</td>${cells}<td class="total-col">${rowV}</td></tr>`;
+      });
+
+      body += `<tr class="total-row"><td>총 합계</td>` +
+        colLabels.map((c, ci)=>{
+          const tot = colTot[ci], n = colN[ci];
+          return `<td>${n ? `<span title="${tot}회 / ${n}명">${(tot/n).toFixed(2)}</span>` : '-'}</td>`;
+        }).join('') +
+        `<td class="total-col">${grandN ? `<span title="${grandTot}회 / ${grandN}명">${(grandTot/grandN).toFixed(2)}</span>` : '-'}</td></tr>`;
+
+      body += `</tbody>`;
+      setHtml(tableId, head + body);
+    }
+
+// 치료사별 분포 등에서 '비율(%)' 매트릭스 렌더링 (행 기준 비율 + 전체 합계)
+    function renderMatrixRowPct(tableId, rowLabels, colLabels, getCount){
+      const head = `<thead><tr><th style="width:110px;">구분</th>` +
+        colLabels.map(c=>`<th>${c}</th>`).join('') +
+        `<th class="total-col">합계</th></tr></thead>`;
+
+      const colTotals = new Array(colLabels.length).fill(0);
+      let grand = 0;
+
+      // 1) 먼저 count를 모아 전체 합계를 계산
+      const rowSums = new Map();
+      rowLabels.forEach(rLabel=>{
+        let rs = 0;
+        colLabels.forEach((cLabel, ci)=>{
+          const v = Number(getCount(rLabel, cLabel) || 0);
+          rs += v;
+          colTotals[ci] += v;
+        });
+        rowSums.set(rLabel, rs);
+        grand += rs;
+      });
+
+      // 2) 렌더 (행 기준 %)
+      let body = `<tbody>`;
+      rowLabels.forEach(rLabel=>{
+        const rs = rowSums.get(rLabel) || 0;
+        let cells = '';
+        colLabels.forEach((cLabel, ci)=>{
+          const v = Number(getCount(rLabel, cLabel) || 0);
+          cells += `<td>${rs>0 ? fmtPct0(v/rs) : '-'}</td>`;
+        });
+        body += `<tr><td>${rLabel}</td>${cells}<td class="total-col">${rs>0 ? '100%' : '-'}</td></tr>`;
+      });
+
+      // 3) 전체 합계(열 기준 %)
+      const totCells = colTotals.map(v=>`<td>${grand>0 ? fmtPct0(v/grand) : '-'}</td>`).join('');
+      body += `<tr class="total-row"><td>총 합계</td>${totCells}<td class="total-col">${grand>0 ? '100%' : '-'}</td></tr>`;
+      body += `</tbody>`;
+
+      setHtml(tableId, head + body);
+    }
+
+
+    function renderMatrixAvg(tableId, rowLabels, colLabels, getStat){
+      // rowLabels: rows, colLabels: cols
+      // getStat(r,c) -> {sum:number, n:number}
+      const head = `<thead><tr><th style="width:110px;">구분</th>` +
+        colLabels.map(c=>`<th>${c}</th>`).join('') +
+        `<th class="total-col">전체</th></tr></thead>`;
+
+      const colSum = new Array(colLabels.length).fill(0);
+      const colN   = new Array(colLabels.length).fill(0);
+      let gSum = 0, gN = 0;
+
+      let body = `<tbody>`;
+      rowLabels.forEach(rLabel=>{
+        let rSum = 0, rN = 0;
+        let cells = '';
+        colLabels.forEach((cLabel, ci)=>{
+          const st = getStat(rLabel, cLabel) || {sum:0,n:0};
+          const s = (st.sum||0), n = (st.n||0);
+          rSum += s; rN += n;
+          colSum[ci] += s; colN[ci] += n;
+
+          if(n>0){
+            const avg = s/n;
+            cells += `<td><div>${avg.toFixed(1)}</div><div style="font-size:10px;color:var(--gray);">n=${n}</div></td>`;
+          }else{
+            cells += `<td>-</td>`;
+          }
+        });
+        gSum += rSum; gN += rN;
+        const rAvgCell = (rN>0)
+          ? `<td class="total-col"><div>${(rSum/rN).toFixed(1)}</div><div style="font-size:10px;color:var(--gray);">n=${rN}</div></td>`
+          : `<td class="total-col">-</td>`;
+        body += `<tr><td>${rLabel}</td>${cells}${rAvgCell}</tr>`;
+      });
+
+      // totals row (가중 평균)
+      const totCells = colLabels.map((c,ci)=>{
+        const n = colN[ci], s = colSum[ci];
+        return n>0
+          ? `<td><div>${(s/n).toFixed(1)}</div><div style="font-size:10px;color:var(--gray);">n=${n}</div></td>`
+          : `<td>-</td>`;
+      }).join('');
+
+      const gCell = (gN>0)
+        ? `<td class="total-col"><div>${(gSum/gN).toFixed(1)}</div><div style="font-size:10px;color:var(--gray);">n=${gN}</div></td>`
+        : `<td class="total-col">-</td>`;
+
+      body += `<tr class="total-row"><td>총 합계</td>${totCells}${gCell}</tr>`;
+      body += `</tbody>`;
+      setHtml(tableId, head + body);
+    }
+
+
+    function cohortPatients(){
+      return activePatients().filter(p => p.isNew && (selPVal===-1 || p.entryPrice===selPVal));
+    }
+
+    // -----------------------------
+    // 5) 메인 렌더
+    // -----------------------------
+    function renderAll(){
+      document.getElementById('dashArea').classList.remove('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+
+      const cohort = cohortPatients();
+
+      // 무료→유료 전환(전체 환자 기준)
+      const freeAll = patientsAll.filter(p => p.freeStart);
+      const freeN = freeAll.length;
+      const freeConv = freeAll.filter(p => p.freeConverted);
+      const freeConvN = freeConv.length;
+      const freeRate = freeN ? (freeConvN / freeN) : 0;
+
+      const freeToNewN = freeConv.filter(p => p.freeConversionTo === '신환').length;
+      const freeToReN  = freeConv.filter(p => p.freeConversionTo === '재진').length;
+
+      const freeDaysArr = freeConv.map(p => p.freeDaysToPaid).filter(v => isFinite(v));
+      const freeAvgDays = freeDaysArr.length ? (freeDaysArr.reduce((a,b)=>a+b,0) / freeDaysArr.length) : 0;
+      const freeMedDays = freeDaysArr.length ? median(freeDaysArr) : 0;
+      const freeMinDays = freeDaysArr.length ? Math.min(...freeDaysArr) : 0;
+      const freeMaxDays = freeDaysArr.length ? Math.max(...freeDaysArr) : 0;
+      const hasAgeUnknown = cohort.some(p => (p.ageBucket||'') === '미상');
+      const ageCols = hasAgeUnknown ? AGE_BUCKETS : AGE_BUCKETS.filter(a => a !== '미상');
+      const hasGenderUnknown = cohort.some(p => (p.gender||'') === '미상');
+      const genCols = hasGenderUnknown ? GENDERS : GENDERS.filter(g => g !== '미상');
+
+      
+      // Dashboard
+      const n = cohort.length;
+      const convN = cohort.filter(p => p.shockVisitCount >= 2).length;
+      const r3N = cohort.filter(p => p.shockVisitCount >= 3).length;
+      
+      const d1 = cohort.filter(p => p.shockVisitCount === 1).length;
+      const d2 = cohort.filter(p => p.shockVisitCount === 2).length;
+      const d3 = cohort.filter(p => p.shockVisitCount === 3).length;
+      const d4 = cohort.filter(p => p.shockVisitCount === 4).length;
+      const d5p = cohort.filter(p => p.shockVisitCount >= 5).length;
+const comboN = cohort.filter(p => p.hasInjection).length;
+
+      const shockCounts = cohort.map(p=>p.shockVisitCount);
+      const avgV = shockCounts.length ? (shockCounts.reduce((a,b)=>a+b,0)/shockCounts.length) : 0;
+      const medV = median(shockCounts);
+      const modeV = modeInfo(shockCounts);
+
+      const r3dN  = cohort.filter(p => (p.daysTo2 !== null && p.daysTo2 <= 3)).length;
+      const r7N  = cohort.filter(p => (p.daysTo2 !== null && p.daysTo2 <= 7)).length;
+      const r14N = cohort.filter(p => (p.daysTo2 !== null && p.daysTo2 <= 14)).length;
+
+      const selLabel = (selPVal===-1 ? '치료 금액: 전체' : ('치료 금액: ' + selPVal.toLocaleString() + '원'));
+      const exclLabel = (exclAmtSet && exclAmtSet.size)
+        ? (' · 제외: ' + Array.from(exclAmtSet).sort((a,b)=>a-b).map(v=>v.toLocaleString()+'원').join(', '))
+        : '';
+
+      document.getElementById('v-count').textContent = fmtInt(n);
+      document.getElementById('v-count-sub').textContent = selLabel + exclLabel;
+
+      document.getElementById('v-conv').textContent = fmtPct(convN/n);
+      document.getElementById('v-conv-sub').textContent = n ? `${convN}/${n}` : '0/0';
+
+      document.getElementById('v-ret').textContent = fmtPct(r3N/n);
+      document.getElementById('v-ret-sub').textContent = n ? `${r3N}/${n}` : '0/0';
+
+      document.getElementById('v-combo').textContent = fmtPct(comboN/n);
+      document.getElementById('v-combo-sub').textContent = n ? `${comboN}/${n}` : '0/0';
+
+      document.getElementById('v-avgV').textContent = avgV.toFixed(1);
+      document.getElementById('v-medV').textContent = String(medV);
+
+      const modeLabel = modeV.modes.length ? modeV.modes.join(', ') : '-';
+      const modeSub = modeV.maxFreq ? ((modeV.modes.length>1 ? '공동 최빈 · ' : '') + `최대 빈도: ${modeV.maxFreq}명`) : '';
+      document.getElementById('v-modeV').textContent = modeLabel;
+      document.getElementById('v-modeV-sub').textContent = modeSub;
+
+      document.getElementById('v-r7').textContent = fmtPct(r7N/n);
+      document.getElementById('v-r7-sub').textContent = n ? `${r7N}/${n}` : '0/0';
+
+      document.getElementById('v-r14').textContent = fmtPct(r14N/n);
+      document.getElementById('v-r14-sub').textContent = n ? `${r14N}/${n}` : '0/0';
+
+// 표 1: 부위별 치료 횟수 (충격파 row 기준) - 연령대 포함
+      const PARTS_BASE = ['목','등','허리','어깨','팔꿈치','손목/손','골반/고관절','무릎','발목/발'];
+      const partAge = new Map(); // key: part||age => count
+      let hasEtcPart = false;
+      const partPatientN = new Map(); // part -> 환자 수(해당 부위 충격파 방문 1회 이상)
+
+      cohort.forEach(p => {
+        // 같은 방문(방문일) 안에서 부위가 여러 행으로 쪼개지거나(줄바꿈),
+        // 한 셀에 '무릎, 발목'처럼 여러 부위가 함께 들어간 경우를 모두 안정적으로 집계한다.
+        const byVisit = new Map();
+        const ppCount = new Map(); // part -> 이 환자의 해당 부위 방문 횟수(방문 단위)
+        p.rows.filter(r => isShock(r.typeRaw)).forEach(r => {
+          const k = (r.visitKey===null || r.visitKey===undefined) ? 'noDate' : String(r.visitKey);
+          if(!byVisit.has(k)) byVisit.set(k, []);
+          byVisit.get(k).push(r);
+        });
+
+        for(const rows of byVisit.values()){
+          const age = (rows.find(x=>x.ageBucket)?.ageBucket) || p.ageBucket || '미상';
+          const parts = [];
+          rows.forEach(r=>{
+            extractParts(r.part).forEach(pt=>{ if(!parts.includes(pt)) parts.push(pt); });
+          });
+          parts.forEach(part=>{
+            if(part === '기타') hasEtcPart = true;
+            const kk = part + '||' + age;
+            partAge.set(kk, (partAge.get(kk)||0) + 1);
+            ppCount.set(part, (ppCount.get(part)||0) + 1);
+          });
+        }
+
+        // 환자 단위로 부위별 분모(환자 수) 집계
+        for(const part of ppCount.keys()){
+          partPatientN.set(part, (partPatientN.get(part)||0) + 1);
+        }
+      });
+
+const PARTS = hasEtcPart ? PARTS_BASE.concat(['기타']) : PARTS_BASE;
+      renderMatrix('table1', PARTS, ageCols, (pPart, a) => partAge.get(pPart + '||' + a) || 0);
+      appendAvgColToMatrix('table1', partPatientN, '환자당 평균 치료횟수');
+
+      // 표 1-1/1-2: 치료사별·부위별 치료 횟수/비율 (충격파 방문 기준)
+      // - 동일 방문일에 같은 부위가 여러 행으로 출력되어도 1회로 처리 (방문당 부위 중복 제거)
+      const therPart = new Map(); // key: therapist||part => count
+      const therSet = new Set();
+      const therPartPatients = new Map(); // key: therapist||part => Set(patientKey)
+
+      cohort.forEach(p=>{
+        const byTherVisit = new Map(); // key: therapist||visitKey => rows
+        p.rows.filter(r => isShock(r.typeRaw)).forEach(r=>{
+          const t = (toStr(r.therapist).trim() || '미상');
+          const vk = (r.visitKey===null || r.visitKey===undefined) ? 'noDate' : String(r.visitKey);
+          const k = t + '||' + vk;
+          if(!byTherVisit.has(k)) byTherVisit.set(k, []);
+          byTherVisit.get(k).push(r);
+        });
+
+        for(const [k, rows] of byTherVisit.entries()){
+          const t = k.split('||')[0];
+          const parts = [];
+          rows.forEach(rr=>{
+            extractParts(rr.part).forEach(pt=>{ if(!parts.includes(pt)) parts.push(pt); });
+          });
+          parts.forEach(pt=>{
+            const kk = t + '||' + pt;
+            therPart.set(kk, (therPart.get(kk)||0) + 1);
+            if(!therPartPatients.has(kk)) therPartPatients.set(kk, new Set());
+            therPartPatients.get(kk).add(p.key);
+          });
+          therSet.add(t);
+        }
+      });
+
+      const therRowsPart = Array.from(therSet).sort((a,b)=>a.localeCompare(b,'ko'));
+      renderMatrix('table1a', therRowsPart, PARTS, (t, part)=> therPart.get(t + '||' + part) || 0);
+      renderMatrixRowPct('table1b', therRowsPart, PARTS, (t, part)=> therPart.get(t + '||' + part) || 0);
+      renderMatrixAvgTotals('table1a_avg', therRowsPart, PARTS,
+        (t, part)=> (therPart.get(t + '||' + part) || 0),
+        (t, part)=> {
+          const s = therPartPatients.get(t + '||' + part);
+
+      // 표 1-0: 부위별 요약(미리보기) - 부위별 핵심 지표를 한 표로 보기
+      (function(){
+        try{
+          const partTotalVisits = new Map();
+          PARTS.forEach(part=>{
+            let sum=0;
+            for(const a of ageCols){
+              sum += (partAge.get(part+'||'+a) || 0);
+            }
+            partTotalVisits.set(part,sum);
+          });
+
+          const partEntrySum = new Map();
+          const partEntryN = new Map();
+          cohort.forEach(p=>{
+            const partSet = new Set();
+            p.rows.filter(r=>isShock(r.typeRaw)).forEach(r=>{
+              extractParts(r.part).forEach(pt=>partSet.add(pt));
+            });
+            for(const pt of partSet){
+              const ep = isFinite(p.entryPrice) ? p.entryPrice : 0;
+              if(ep>0){
+                partEntrySum.set(pt,(partEntrySum.get(pt)||0)+ep);
+                partEntryN.set(pt,(partEntryN.get(pt)||0)+1);
+              }
+            }
+          });
+
+          const partTherAvg = new Map();
+          PARTS.forEach(part=>{
+            let sum=0, nT=0;
+            for(const t of therSet){
+              const k = t+'||'+part;
+              const ps = therPartPatients.get(k);
+              if(ps && ps.size){
+                sum += ((therPart.get(k)||0) / ps.size);
+                nT++;
+              }
+            }
+            partTherAvg.set(part, nT ? (sum/nT) : 0);
+          });
+
+          const rows = PARTS.map(part=>{
+            const pats = partPatientN.get(part)||0;
+            const visits = partTotalVisits.get(part)||0;
+            const avg = pats ? (visits/pats) : 0;
+            const tavg = partTherAvg.get(part)||0;
+            const epAvg = (partEntryN.get(part)||0) ? (partEntrySum.get(part)/partEntryN.get(part)) : 0;
+            return {
+              '부위': part,
+              '환자 수': fmtCount(pats,'명'),
+              '치료 건수': fmtCount(visits,'회'),
+              '환자당 평균 치료횟수': avg ? avg.toFixed(2) : '-',
+              '치료사 평균 치료횟수': tavg ? tavg.toFixed(2) : '-'
+            };
+          });
+
+          // --- Total row (unique patients in cohort) ---
+          try{
+            let _totalVisits = 0;
+            partTotalVisits.forEach(v=>{ _totalVisits += (v||0); });
+            rows.push({
+              _rowClass:'total-row',
+              '부위':'총 합계',
+              '환자 수': fmtCount(cohort.length,'명'),
+              '치료 건수': fmtCount(_totalVisits,'회'),
+              // 전체(총 합계) 평균: 가중평균
+              '환자당 평균 치료횟수': cohort.length ? (_totalVisits/cohort.length).toFixed(2) : '-',
+              // 치료사 평균 치료횟수: 치료사별(환자당 평균)들의 평균
+              '치료사 평균 치료횟수': (function(){
+                try{
+                  const m = new Map(); // therapist -> {sum, n}
+                  cohort.forEach(p=>{
+                    const t = (p.therapist||'미기입');
+                    if(!m.has(t)) m.set(t,{sum:0,n:0});
+                    const o = m.get(t);
+                    o.sum += (p.shockVisitCount||0);
+                    o.n += 1;
+                  });
+                  let s=0, k=0;
+                  m.forEach(o=>{
+                    if(o.n){
+                      s += (o.sum/o.n);
+                      k += 1;
+                    }
+                  });
+                  return k ? (s/k).toFixed(2) : '-';
+                }catch(e){ return '-'; }
+              })()
+            });
+          }catch(e){}
+
+          renderSimpleTable('table1_summary',
+            [{k:'부위',l:'부위',w:110},
+             {k:'환자 수',l:'환자 수'},
+             {k:'치료 건수',l:'치료 건수'},
+             {k:'환자당 평균 치료횟수',l:'환자당 평균 치료횟수'},
+             {k:'치료사 평균 치료횟수',l:'치료사 평균 치료횟수'},
+             ],
+            rows
+          );
+        }catch(e){}
+      })();
+
+          return s ? s.size : 0;
+        }
+      );// 표 1-3~1-6: Free(기타여부) → 유료 전환 (기타→신환/재진)
+      const actAll = patientsAfterFreeExclusion();
+      const freeAll2 = actAll.filter(p => p.freeStart);
+      const freeN2 = freeAll2.length;
+      const freeConv2 = freeAll2.filter(p => p.freeConverted);
+      const freeConvN2 = freeConv2.length;
+      const freeRate2 = freeN2 ? (freeConvN2 / freeN2) : 0;
+      const freeToNewN2 = freeConv2.filter(p => p.freeConversionTo === '신환').length;
+      const freeToReN2  = freeConv2.filter(p => p.freeConversionTo === '재진').length;
+      const freeDaysArr2 = freeConv2.map(p => (p.freeStartKey!==null && p.freeConversionKey!==null) ? (p.freeConversionKey - p.freeStartKey) : null).filter(v=>isFinite(v));
+      const freeAvgDays2 = freeDaysArr2.length ? (freeDaysArr2.reduce((a,b)=>a+b,0)/freeDaysArr2.length).toFixed(1) : null;
+      const freeMedDays2 = freeDaysArr2.length ? median(freeDaysArr2) : null;
+      const freeMinDays2 = freeDaysArr2.length ? Math.min(...freeDaysArr2) : null;
+      const freeMaxDays2 = freeDaysArr2.length ? Math.max(...freeDaysArr2) : null;
+
+      renderKeyValueTable('table1c', [
+        {k:'무료(기타여부) 시작(첫 방문 기준)', v: `${fmtCount(freeN2,'명')}`},
+        {k:'Free(기타여부) → 유료 전환율', v: freeN2 ? `${fmtPct(freeRate2)}` : '-'},
+        {k:'전환 인원', v: `${fmtCount(freeConvN2,'명')}`},
+        {k:'전환 유형', v: `신환 ${fmtCount(freeToNewN2,'명')} / 재진 ${fmtCount(freeToReN2,'명')}`},
+        {k:'전환까지 소요일(방문일)', v: freeDaysArr2.length ? `평균 ${freeAvgDays2}일 · 중앙 ${freeMedDays2}일 (최소 ${freeMinDays2}~최대 ${freeMaxDays2})` : '-'}
+      ]);
+
+      // 연령대별 Free(기타여부) → 유료 전환
+      const freeAgeRows = [];
+      AGE_BUCKETS.forEach(a=>{
+        const ps = freeAll2.filter(p => (p.ageBucket||'미상')===a);
+        const fn = ps.length;
+        const cn = ps.filter(p=>p.freeConverted).length;
+        freeAgeRows.push({
+          '연령대': a,
+          '무료 시작': `${fmtCount(fn,'명')}`,
+          '전환': `${fmtCount(cn,'명')}`,
+          '전환율': fmtPct(cn/fn)
+        });
+      });
+      renderSimpleTable('table1d', [
+        {k:'연령대',l:'연령대',w:90},
+        {k:'무료 시작',l:'무료 시작'},
+        {k:'전환',l:'전환'},
+        {k:'전환율',l:'전환율'}
+      ], freeAgeRows);
+
+      // 부위별 Free(기타여부) → 유료 전환 (환자 1명이 여러 부위에 포함될 수 있음)
+      const freePartMap = new Map(PARTS.map(p=>[p,{free:0, conv:0}]));
+      const addPart = (part, isConv)=>{
+        const k = PARTS.includes(part) ? part : (part==='(미기입)' ? '(미기입)' : '기타');
+        if(!freePartMap.has(k)) freePartMap.set(k,{free:0,conv:0});
+        const o = freePartMap.get(k);
+        o.free += 1;
+        if(isConv) o.conv += 1;
+      };
+      freeAll2.forEach(p=>{
+        const baseRows = (p.firstShockKey!==null)
+          ? p.rows.filter(r=>isShock(r.typeRaw) && isFinite(r.visitKey) && (Number(r.visitKey)===Number(p.firstShockKey)))
+          : p.rows.filter(r=>isShock(r.typeRaw));
+        let parts = [];
+        baseRows.forEach(r=>{ parts = parts.concat(extractParts(r.part)); });
+        const uniq = Array.from(new Set(parts.length?parts:['(미기입)']));
+        uniq.forEach(pt=>addPart(pt, p.freeConverted));
+      });
+      const freePartRows = Array.from(freePartMap.entries()).map(([pt,o])=>({
+        '부위': pt,
+        '무료 시작': `${fmtCount(o.free,'명')}`,
+        '전환': `${fmtCount(o.conv,'명')}`,
+        '전환율': o.free ? fmtPct(o.conv/o.free) : '-'
+      }));
+      renderSimpleTable('table1e', [
+        {k:'부위',l:'부위',w:110},
+        {k:'무료 시작',l:'무료 시작'},
+        {k:'전환',l:'전환'},
+        {k:'전환율',l:'전환율'}
+      ], freePartRows);
+
+      // 치료사별 Free(기타여부) → 유료 전환
+      const freeTherMap = new Map();
+      freeAll2.forEach(p=>{
+        const t = (p.therapist||'미기입');
+        if(!freeTherMap.has(t)) freeTherMap.set(t,{free:0,conv:0});
+        const o = freeTherMap.get(t);
+        o.free += 1;
+        if(p.freeConverted) o.conv += 1;
+      });
+      const freeTherRows = Array.from(freeTherMap.entries()).sort((a,b)=>a[0].localeCompare(b[0],'ko')).map(([t,o])=>({
+        '치료사': t,
+        '무료 시작': `${fmtCount(o.free,'명')}`,
+        '전환': `${fmtCount(o.conv,'명')}`,
+        '전환율': o.free ? fmtPct(o.conv/o.free) : '-'
+      }));
+      renderSimpleTable('table1f', [
+        {k:'치료사',l:'치료사',w:90},
+        {k:'무료 시작',l:'무료 시작'},
+        {k:'전환',l:'전환'},
+        {k:'전환율',l:'전환율'}
+      ], freeTherRows);
+
+      // 표 1-7: 치료사별·부위별 3회차 도달율 (환자 단위, 부위는 첫 충격파 방문 기준)
+      const therPartDen = new Map();
+      const therPartNum = new Map();
+      const tpKey = (t,pt)=> t + '||' + pt;
+      cohort.forEach(p=>{
+        const t = (p.therapist||'미기입');
+        const baseRows = (p.firstShockKey!==null)
+          ? p.rows.filter(r=>isShock(r.typeRaw) && isFinite(r.visitKey) && (Number(r.visitKey)===Number(p.firstShockKey)))
+          : p.rows.filter(r=>isShock(r.typeRaw));
+        let parts = [];
+        baseRows.forEach(r=>{ parts = parts.concat(extractParts(r.part)); });
+        const uniq = Array.from(new Set(parts.length?parts:['(미기입)']));
+        uniq.forEach(pt0=>{
+          const pt = PARTS.includes(pt0) ? pt0 : (pt0==='(미기입)' ? '(미기입)' : '기타');
+          const k = tpKey(t,pt);
+          therPartDen.set(k, (therPartDen.get(k)||0) + 1);
+          if(p.shockVisitCount>=3) therPartNum.set(k, (therPartNum.get(k)||0) + 1);
+        });
+      });
+      renderMatrixPctTotals('table1g', therRowsPart, PARTS,
+        (t,pt)=> (therPartNum.get(tpKey(t,pt)) || 0),
+        (t,pt)=> (therPartDen.get(tpKey(t,pt)) || 0)
+      );
+      // 표 2: 요약 핵심지표
+      const injRate = n ? comboN/n : 0;
+      const selTxt = (selPVal===-1 ? '전체' : (selPVal.toLocaleString()+'원'));
+      const exclTxt = (() => {
+        const parts = [];
+        if(exclAmtSet && exclAmtSet.size){
+          parts.push(...Array.from(exclAmtSet).sort((a,b)=>a-b).map(v=>v.toLocaleString()+'원'));
+        }
+        if(exclAmtFreeSet && exclAmtFreeSet.size){
+          parts.push(...Array.from(exclAmtFreeSet).sort((a,b)=>a-b).map(v=>v.toLocaleString()+'원(기타)'));
+        }
+        return parts.length ? (' / 제외: ' + parts.join(', ')) : '';
+      })();
+
+      renderKeyValueTable('table2', [
+        {k:'신환 수(치료 금액)', v: `${fmtCount(n,'명')} / ${selTxt}${exclTxt}`},
+        {k:'2회차 전환율', v: n ? `${fmtInt(convN)} / ${fmtPct(convN/n)}` : '-'},
+        {k:'3회차 도달율', v: n ? `${fmtInt(r3N)} / ${fmtPct(r3N/n)}` : '-'},
+        {k:'3일 내 재방문율(D+3)', v: n ? `${fmtInt(r3dN)} / ${fmtPct(r3dN/n)}` : '-'},
+        {k:'7일 내 재방문율(D+7)', v: n ? `${fmtInt(r7N)} / ${fmtPct(r7N/n)}` : '-'},
+        {k:'14일 내 재방문율(D+14)', v: n ? `${fmtInt(r14N)} / ${fmtPct(r14N/n)}` : '-'},
+        {k:'평균/중간값/최빈 치료 횟수', v: `${avgV.toFixed(1)} / ${medV} / ${modeLabel}`}
+      ]);
+      // 표 3: 연령대별 (신환 수 / 재방문 / 평균 치료 횟수)
+      const byAge = new Map(ageCols.map(a=>[a, {patients:0, shockDays:0, revisitPatients:0, revisitCount:0}]));
+      cohort.forEach(p => {
+        const bucket = ageCols.includes(p.ageBucket) ? p.ageBucket : (ageCols.includes('미상') ? '미상' : ageCols[0]);
+        const o = byAge.get(bucket);
+        o.patients += 1;
+        o.shockDays += p.shockVisitCount;                  // 치료일 수 합(=치료 횟수 합)
+        if(p.shockVisitCount >= 2) o.revisitPatients += 1; // 2회 이상 재방문한 사람 수
+        o.revisitCount += Math.max(0, p.shockVisitCount - 1); // 재방문 횟수(초진 1회를 제외)
+      });
+
+      // 성별 분포(표 3에 포함)
+      const sexMat = new Map();
+      ageCols.forEach(a=>{
+        const mm = new Map(); genCols.forEach(g=>mm.set(g,0));
+        sexMat.set(a, mm);
+      });
+      cohort.forEach(p=>{
+        const a = ageCols.includes(p.ageBucket) ? p.ageBucket : (ageCols.includes('미상') ? '미상' : ageCols[0]);
+        const g = genCols.includes(p.gender) ? p.gender : (genCols.includes('미상') ? '미상' : genCols[0]);
+        sexMat.get(a).set(g, (sexMat.get(a).get(g)||0) + 1);
+      });
+      const sexTot = {남:0, 여:0, 미상:0};
+      ageCols.forEach(a=>{
+        const mm = sexMat.get(a);
+        if(!mm) return;
+        sexTot.남 += (mm.get('남')||0);
+        sexTot.여 += (mm.get('여')||0);
+        sexTot.미상 += (mm.get('미상')||0);
+      });
+
+
+      const t3 = ageCols.map(a=>{
+        const o = byAge.get(a) || {patients:0, shockDays:0, revisitPatients:0, revisitCount:0};
+        return {
+          '연령대': a,
+          '신환 수': o.patients,
+          '남(명)': (sexMat.get(a)?.get('남')||0),
+          '여(명)': (sexMat.get(a)?.get('여')||0),
+          '남 비중': o.patients ? fmtPct(((sexMat.get(a)?.get('남')||0)/o.patients)) : '-',
+          '여 비중': o.patients ? fmtPct(((sexMat.get(a)?.get('여')||0)/o.patients)) : '-',
+          '재방문율': o.patients ? fmtPct(o.revisitPatients/o.patients) : '-',
+          '재방문 횟수': o.revisitCount,
+          '평균 치료 횟수': o.patients ? (o.shockDays/o.patients).toFixed(2) : '0.00'
+        };
+      });
+
+      // 합계(전체)
+      const totalRevisitCount = shockCounts.reduce((a,c)=>a + Math.max(0, c-1), 0);
+      t3.push({
+        _rowClass: 'total-row',
+        '연령대': '총 합계',
+        '신환 수': n,
+        '남(명)': sexTot.남,
+        '여(명)': sexTot.여,
+        '남 비중': fmtPct(sexTot.남/n),
+        '여 비중': fmtPct(sexTot.여/n),
+        '재방문율': fmtPct(convN/n),
+        '재방문 횟수': totalRevisitCount,
+        '평균 치료 횟수': n ? (shockCounts.reduce((a,c)=>a+c,0)/n).toFixed(2) : '0.00'
+      });
+
+      renderSimpleTable('table3',
+        [{k:'연령대',l:'연령대',w:90},
+         {k:'신환 수',l:'신환 수'},
+         {k:'남(명)',l:'남(명)'},
+         {k:'여(명)',l:'여(명)'},
+         {k:'남 비중',l:'남 비중'},
+         {k:'여 비중',l:'여 비중'},
+         {k:'재방문율',l:'재방문율(2회 이상)'},
+         {k:'재방문 횟수',l:'재방문 횟수'},
+         {k:'평균 치료 횟수',l:'평균 치료 횟수'}],
+        t3
+      );
+      // 표 5: 충격파 방문 횟수 분포 (방문 횟수 x 연령대) - 1~5회 이상까지 표시
+const visitBins = ['1회만','2회만','3회만','4회만','5회 이상'];
+const keepMat = new Map();
+visitBins.forEach(b=>{
+  const m = new Map(); ageCols.forEach(a=>m.set(a,0));
+  keepMat.set(b,m);
+});
+cohort.forEach(p=>{
+  const c = p.shockVisitCount;
+  const b = (c>=5) ? '5회 이상' : (c + '회만');
+  if(!keepMat.has(b)) return;
+  const age = AGE_BUCKETS.includes(p.ageBucket) ? p.ageBucket : '미상';
+  keepMat.get(b).set(age, keepMat.get(b).get(age) + 1);
+});
+renderMatrix('table5', visitBins, ageCols, (bin, age)=> (keepMat.get(bin)?.get(age)) || 0);
+
+
+      // 표 6: 방문회차 인원 분포 (연령대 x 회차)
+      const rounds = ['1회만','2회만','3회만','4회만','5회 이상'];
+      const distMat = new Map();
+      ageCols.forEach(a=>{
+        const m = new Map(); rounds.forEach(r=>m.set(r,0));
+        distMat.set(a,m);
+      });
+      cohort.forEach(p=>{
+        const a = AGE_BUCKETS.includes(p.ageBucket) ? p.ageBucket : '미상';
+        const c = p.shockVisitCount;
+        const r = (c>=5) ? '5회 이상' : (c + '회만');
+        distMat.get(a).set(r, distMat.get(a).get(r) + 1);
+      });
+      renderMatrix('table6', ageCols, rounds, (age, round)=> (distMat.get(age)?.get(round)) || 0);
+
+      // 표 6-1: 연령대별 회차 비율 (최종 회차 분포)
+      const ageTotals = new Map();
+      ageCols.forEach(a=>ageTotals.set(a,0));
+      cohort.forEach(p=>{
+        const a = ageCols.includes(p.ageBucket) ? p.ageBucket : (ageCols.includes('미상') ? '미상' : ageCols[0]);
+        ageTotals.set(a, (ageTotals.get(a)||0) + 1);
+      });
+      renderMatrixCountPctTotals('table6', ageCols, rounds, (age, round)=> (distMat.get(age)?.get(round)) || 0, ageTotals);
+
+      // 표 6-2: 연령대별 회차 도달률 (누적 도달)
+      const reachCols2 = ['2회 이상','3회 이상','4회 이상','5회 이상'];
+      const reachMat2 = new Map();
+      ageCols.forEach(a=>{
+        const mm = new Map(); reachCols2.forEach(c=>mm.set(c,0));
+        reachMat2.set(a, mm);
+      });
+      cohort.forEach(p=>{
+        const a = ageCols.includes(p.ageBucket) ? p.ageBucket : (ageCols.includes('미상') ? '미상' : ageCols[0]);
+        const c = p.shockVisitCount;
+        if(c>=2) reachMat2.get(a).set('2회 이상', (reachMat2.get(a).get('2회 이상')||0) + 1);
+        if(c>=3) reachMat2.get(a).set('3회 이상', (reachMat2.get(a).get('3회 이상')||0) + 1);
+        if(c>=4) reachMat2.get(a).set('4회 이상', (reachMat2.get(a).get('4회 이상')||0) + 1);
+        if(c>=5) reachMat2.get(a).set('5회 이상', (reachMat2.get(a).get('5회 이상')||0) + 1);
+      });
+      renderMatrixCountPctTotals('table6_1', ageCols, reachCols2, (age, col)=> (reachMat2.get(age)?.get(col)) || 0, ageTotals);
+
+
+      // 표 7: 치료 금액 구간별 핵심지표
+      const actPatients = activePatients();
+      const priceSet = Array.from(new Set(
+        actPatients.filter(p=>p.isNew)
+          .map(p=>p.entryPrice)
+          .filter(v=>isFinite(v) && v>0)
+      )).sort((a,b)=>a-b);
+
+      const t7 = [];
+      let totN = 0, totC2 = 0, totC3 = 0, totInj = 0, totShock = 0;
+
+      priceSet.forEach(price=>{
+        const ps = actPatients.filter(p=>p.isNew && p.entryPrice===price);
+        const n0 = ps.length;
+        const c2 = ps.filter(p=>p.shockVisitCount>=2).length;
+        const c3 = ps.filter(p=>p.shockVisitCount>=3).length;
+        const inj = ps.filter(p=>p.hasInjection).length;
+        const shockSum = ps.reduce((a,p)=>a+p.shockVisitCount,0);
+        const avgT = n0 ? (shockSum/n0) : 0;
+
+        totN += n0; totC2 += c2; totC3 += c3; totInj += inj; totShock += shockSum;
+
+        t7.push({
+          '치료금액': price.toLocaleString()+'원',
+          '신환수': n0,
+          '2회차 전환율': n0 ? fmtPct(c2/n0) : '-',
+          '3회차 도달율': n0 ? fmtPct(c3/n0) : '-',
+          '주사병행': n0 ? fmtPct(inj/n0) : '-',
+          '평균치료': n0 ? avgT.toFixed(2) : '0.00'
+        });
+      });
+
+      if(priceSet.length){
+        t7.push({
+          _rowClass: 'total-row',
+          '치료금액': '총 합계',
+          '신환수': totN,
+          '2회차 전환율': totN ? fmtPct(totC2/totN) : '-',
+          '3회차 도달율': totN ? fmtPct(totC3/totN) : '-',
+          '주사병행': totN ? fmtPct(totInj/totN) : '-',
+          '평균치료': totN ? (totShock/totN).toFixed(2) : '0.00'
+        });
+      }
+
+      renderSimpleTable('table7',
+        [{k:'치료금액',l:'치료 금액',w:110},{k:'신환수',l:'신환수'},
+         {k:'2회차 전환율',l:'2회차 전환율'},{k:'3회차 도달율',l:'3회차 도달율'},
+         {k:'주사병행',l:'주사치료 병행'},{k:'평균치료',l:'평균 치료 횟수'}],
+        t7
+      );
+
+      // 표 8: 치료사별 핵심지표
+      const therapists = Array.from(new Set(cohort.map(p=>p.therapist))).sort((a,b)=>a.localeCompare(b));
+      const t8 = [];
+
+      // '전체 평균 치료 횟수'는 (필터/제외조건이 반영된) activePatients() 기준으로 계산
+      const actAllForAvg = activePatients();
+      const actAllShockSum = actAllForAvg.reduce((a,p)=>a+p.shockVisitCount,0);
+      const actAllAvg = actAllForAvg.length ? (actAllShockSum/actAllForAvg.length) : 0;
+
+      therapists.forEach(t=>{
+        const ps = cohort.filter(p=>p.therapist===t); // 기존 로직(신환 cohort)
+        const n0 = ps.length;
+        const c2 = ps.filter(p=>p.shockVisitCount>=2).length;
+        const c3 = ps.filter(p=>p.shockVisitCount>=3).length;
+        const inj = ps.filter(p=>p.hasInjection).length;
+        const shockSum = ps.reduce((a,p)=>a+p.shockVisitCount,0);
+        const avgtNew = n0 ? (shockSum/n0) : 0;
+
+        // 전체 환자(신/재 포함) 기준 평균 치료 횟수
+        const psAll = actAllForAvg.filter(p=>p.therapist===t);
+        const nAll = psAll.length;
+        const shockSumAll = psAll.reduce((a,p)=>a+p.shockVisitCount,0);
+        const avgtAll = nAll ? (shockSumAll/nAll) : 0;
+
+        t8.push({
+          '치료사': t,
+          '신환수': n0,
+          '2회차 전환율': n0 ? fmtPct(c2/n0) : '-',
+          '3회차 도달율': n0 ? fmtPct(c3/n0) : '-',
+          '주사병행': n0 ? fmtPct(inj/n0) : '-',
+          '평균치료': nAll ? avgtAll.toFixed(2) : '0.00',
+          '신환 평균치료': n0 ? avgtNew.toFixed(2) : '0.00'
+        });
+      });
+
+      t8.push({
+        _rowClass: 'total-row',
+        '치료사': '총 합계',
+        '신환수': n,
+        '2회차 전환율': fmtPct(convN/n),
+        '3회차 도달율': fmtPct(r3N/n),
+        '주사병행': fmtPct(comboN/n),
+        '평균치료': actAllForAvg.length ? actAllAvg.toFixed(2) : '0.00',
+        '신환 평균치료': n ? avgV.toFixed(2) : '0.00'
+      });
+
+      renderSimpleTable('table8',
+        [{k:'치료사',l:'치료사',w:90},{k:'신환수',l:'신환수'},
+         {k:'2회차 전환율',l:'2회차 전환율'},{k:'3회차 도달율',l:'3회차 도달율'},{k:'주사병행',l:'주사치료 병행'},
+         {k:'평균치료',l:'전체 평균 치료 횟수'},{k:'신환 평균치료',l:'신환 평균 치료 횟수'}],
+        t8
+      );
+
+
+      // 표 8-1: 충격파 치료사별 신환/재진 예약 비율(O/X) (방문 단위)
+      const cohortKeySet = new Set(cohort.map(p=>p.key));
+      const firstShockMap = new Map(cohort.map(p=>[p.key, p.firstShockKey]));
+
+      // 방문(환자+방문일+치료타입+회차+치료사) 단위로 예약값을 1개로 만든다.
+      const visitAgg = new Map();
+      for(const r of records){
+if(!cohortKeySet.has(r.key)) continue;
+        const vid = [r.key, r.therapist||'미상', String(r.visitKey||'')].join('||');
+        if(!visitAgg.has(vid)){
+          visitAgg.set(vid, {pkey:r.key, therapist:(r.therapist||'미상'), visitKey:r.visitKey, reserve:''});
+        }
+        const a = visitAgg.get(vid);
+        const rv = toStr(r.reserve).trim().toUpperCase();
+        if(rv==='O') a.reserve = 'O';
+        else if(rv==='X' && a.reserve!=='O') a.reserve = 'X';
+      }
+
+      const byTher = new Map();
+      const ensureTher = (t)=>{
+        if(!byTher.has(t)) byTher.set(t, {t, nO:0, nX:0, nM:0, rO:0, rX:0, rM:0});
+        return byTher.get(t);
+      };
+
+      for(const v of visitAgg.values()){
+        const first = firstShockMap.get(v.pkey);
+        const isNewVisit = (first !== null && first !== undefined && v.visitKey === first);
+        const st = ensureTher(v.therapist);
+        const bucket = isNewVisit ? 'n' : 'r';
+        if(v.reserve==='O') st[bucket+'O']++;
+        else if(v.reserve==='X') st[bucket+'X']++;
+        else st[bucket+'M']++;
+      }
+
+      const therRows = Array.from(byTher.values()).sort((a,b)=>a.t.localeCompare(b.t,'ko'));
+      const t8r = therRows.map(x=>{
+        const nDen = x.nO + x.nX;
+        const rDen = x.rO + x.rX;
+        return {
+          '치료사': x.t,
+          '신환 O': x.nO,
+          '신환 X': x.nX,
+          '신환 예약 비율': fmtPct(x.nO/nDen),
+          '재진 O': x.rO,
+          '재진 X': x.rX,
+          '재진 예약 비율': fmtPct(x.rO/rDen),
+          '미기입': x.nM + x.rM
+        };
+      });
+
+      // 총 합계 행
+      const tot8r = therRows.reduce((acc,x)=>{
+        acc.nO += x.nO; acc.nX += x.nX; acc.nM += x.nM;
+        acc.rO += x.rO; acc.rX += x.rX; acc.rM += x.rM;
+        return acc;
+      }, {nO:0,nX:0,nM:0,rO:0,rX:0,rM:0});
+
+      const nDenAll = tot8r.nO + tot8r.nX;
+      const rDenAll = tot8r.rO + tot8r.rX;
+      t8r.push({
+        _rowClass: 'total-row',
+        '치료사': '총 합계',
+        '신환 O': tot8r.nO,
+        '신환 X': tot8r.nX,
+        '신환 예약 비율': nDenAll ? fmtPct(tot8r.nO/nDenAll) : '-',
+        '재진 O': tot8r.rO,
+        '재진 X': tot8r.rX,
+        '재진 예약 비율': rDenAll ? fmtPct(tot8r.rO/rDenAll) : '-',
+        '미기입': tot8r.nM + tot8r.rM
+      });
+
+      renderSimpleTable('table8r',
+        [{k:'치료사',l:'치료사',w:90},
+         {k:'신환 O',l:'신환 O'},{k:'신환 X',l:'신환 X'},{k:'신환 예약 비율',l:'신환 예약 비율'},
+         {k:'재진 O',l:'재진 O'},{k:'재진 X',l:'재진 X'},{k:'재진 예약 비율',l:'재진 예약 비율'},
+         {k:'미기입',l:'미기입'}],
+        t8r
+      );
+
+
+      // 표 8-2: 충격파 치료사별 신환/재진 예약 비율(기존 재진 포함) (방문 단위)
+      const actKeySet2 = new Set(activePatients().map(p=>p.key));
+
+      const visitAgg2 = new Map();
+      for(const r of records){
+        if(!actKeySet2.has(r.key)) continue;
+        const vid = [r.key, r.therapist||'미상', String(r.visitKey||'')].join('||');
+        if(!visitAgg2.has(vid)){
+          visitAgg2.set(vid, {therapist:(r.therapist||'미상'), isNew:false, reserve:''});
+        }
+        const a = visitAgg2.get(vid);
+
+        const nf = toStr(r.newFlag).trim();
+        if(nf.includes('신환') || nf.includes('기타')) a.isNew = true;
+
+        const rv = toStr(r.reserve).trim().toUpperCase();
+        if(rv==='O') a.reserve = 'O';
+        else if(rv==='X' && a.reserve!=='O') a.reserve = 'X';
+      }
+
+      const byTher2 = new Map();
+      for(const v of visitAgg2.values()){
+        const th = v.therapist || '미상';
+        if(!byTher2.has(th)){
+          byTher2.set(th, {therapist:th, nO:0,nX:0,nM:0, rO:0,rX:0,rM:0});
+        }
+        const o = byTher2.get(th);
+        const bucket = v.isNew ? 'n' : 'r';
+        if(bucket==='n'){
+          if(v.reserve==='O') o.nO += 1;
+          else if(v.reserve==='X') o.nX += 1;
+          else o.nM += 1;
+        }else{
+          if(v.reserve==='O') o.rO += 1;
+          else if(v.reserve==='X') o.rX += 1;
+          else o.rM += 1;
+        }
+      }
+
+      const t8r2 = Array.from(byTher2.values())
+        .sort((a,b)=> a.therapist.localeCompare(b.therapist,'ko'))
+        .map(o=>({
+          '치료사': o.therapist,
+          '신환 O': o.nO,
+          '신환 X': o.nX,
+          '신환 예약 비율': (o.nO+o.nX) ? fmtPct(o.nO/(o.nO+o.nX)) : '-',
+          '재진 O': o.rO,
+          '재진 X': o.rX,
+          '재진 예약 비율': (o.rO+o.rX) ? fmtPct(o.rO/(o.rO+o.rX)) : '-',
+          '미기입': o.nM + o.rM
+        }));
+
+      const tot8r2 = t8r2.reduce((m,row)=>{
+        m.nO += (row['신환 O']||0); m.nX += (row['신환 X']||0);
+        m.rO += (row['재진 O']||0); m.rX += (row['재진 X']||0);
+        m.miss += (row['미기입']||0);
+        return m;
+      }, {nO:0,nX:0,rO:0,rX:0,miss:0});
+
+      t8r2.push({
+        '치료사': '총 합계',
+        '신환 O': tot8r2.nO,
+        '신환 X': tot8r2.nX,
+        '신환 예약 비율': (tot8r2.nO+tot8r2.nX) ? fmtPct(tot8r2.nO/(tot8r2.nO+tot8r2.nX)) : '-',
+        '재진 O': tot8r2.rO,
+        '재진 X': tot8r2.rX,
+        '재진 예약 비율': (tot8r2.rO+tot8r2.rX) ? fmtPct(tot8r2.rO/(tot8r2.rO+tot8r2.rX)) : '-',
+        '미기입': tot8r2.miss
+      });
+
+      renderSimpleTable('table8r2',
+        [{k:'치료사',l:'치료사',w:90},
+         {k:'신환 O',l:'신환 O'},{k:'신환 X',l:'신환 X'},{k:'신환 예약 비율',l:'신환 예약 비율'},
+         {k:'재진 O',l:'재진 O'},{k:'재진 X',l:'재진 X'},{k:'재진 예약 비율',l:'재진 예약 비율'},
+         {k:'미기입',l:'미기입'}],
+        t8r2
+      );
+
+
+      // 표 9: 재방문 주기(첫 충격파 → 2회차)
+      const speedBinsAll = ['0-3일','4-7일','8-14일','15-30일','31-60일','61일 이상','1회만 내원'];
+      const spMat = new Map();
+      speedBinsAll.forEach(b=>{
+        const m = new Map(); ageCols.forEach(a=>m.set(a,0));
+        spMat.set(b,m);
+      });
+
+      cohort.forEach(p=>{
+        const age = AGE_BUCKETS.includes(p.ageBucket) ? p.ageBucket : '미상';
+        let b = '1회만 내원'; // 2회차가 없으면 1회만 내원으로 분류
+        if(p.daysTo2 !== null){
+          const d = p.daysTo2;
+          if(d <= 3) b = '0-3일';
+          else if(d <= 7) b = '4-7일';
+          else if(d <= 14) b = '8-14일';
+          else if(d <= 30) b = '15-30일';
+          else if(d <= 60) b = '31-60일';
+          else b = '61일 이상';
+        }
+        spMat.get(b).set(age, spMat.get(b).get(age) + 1);
+      });
+
+      // 데이터가 없는 구간(예: 30일 이내 데이터면 31-60일/61일 이상)을 자동으로 숨김
+      const speedBins = speedBinsAll.filter(bin=>{
+        let total = 0;
+        ageCols.forEach(a=> total += spMat.get(bin)?.get(a) || 0);
+        return total > 0;
+      });
+
+      renderMatrixCountPctTotals('table9', ageCols, speedBins, (age, bin)=> (spMat.get(bin)?.get(age)) || 0, ageTotals);
+
+
+// 표 9-1: 치료사별 재방문 주기(표 9와 동일 형식)
+(function(){
+  const container = document.getElementById('table9_1_container');
+  if(!container) return;
+  // rerender 대비: 기존 내용 제거(중복 ID/빈 테이블 발생 방지)
+  container.innerHTML = '';
+  const h = (s)=>String(s).replace(/[&<>"']/g, ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
+
+  const speedBinsAll = ['0-3일','4-7일','8-14일','15-30일','31-60일','61일 이상','1회만 내원'];
+
+  const therapists = Array.from(new Set(cohort.map(p=>p.therapist))).sort((a,b)=>a.localeCompare(b,'ko'));
+  const safeId = (s)=> String(s).replace(/[^a-zA-Z0-9가-힣_]/g,'_');
+
+  therapists.forEach((t, idx)=>{
+    const ps = cohort.filter(p=>p.therapist===t);
+    // 섹션 헤더 + 테이블 엘리먼트 생성
+    const wrap = document.createElement('div');
+    wrap.style.margin = '10px 0 14px';
+    wrap.innerHTML = `<div style="overflow-x:auto;"><table id="table9_1_${idx}_${safeId(t)}"></table></div>`;
+    container.appendChild(wrap);
+
+    // 빈 데이터면 표만 비워둠
+    if(ps.length===0){
+      setHtml(`table9_1_${idx}_${safeId(t)}`, `<thead><tr><th>구분</th><th>데이터 없음</th></tr></thead><tbody><tr><td>${h(t)}</td><td>-</td></tr></tbody>`);
+      return;
+    }
+
+    // 매트릭스 계산: (행=연령대, 열=재방문구간) / 셀: 건수 및 행 기준 비율
+    const spMat = new Map();
+    speedBinsAll.forEach(b=>{
+      const m = new Map(); ageCols.forEach(a=>m.set(a,0));
+      spMat.set(b,m);
+    });
+
+    ps.forEach(p=>{
+      const age = AGE_BUCKETS.includes(p.ageBucket) ? p.ageBucket : '미상';
+      let b = '1회만 내원';
+      if(p.daysTo2 !== null){
+        const d = p.daysTo2;
+        if(d <= 3) b = '0-3일';
+        else if(d <= 7) b = '4-7일';
+        else if(d <= 14) b = '8-14일';
+        else if(d <= 30) b = '15-30일';
+        else if(d <= 60) b = '31-60일';
+        else b = '61일 이상';
+      }
+      spMat.get(b).set(age, (spMat.get(b).get(age) || 0) + 1);
+    });
+
+    // 치료사 데이터 기준으로 '데이터가 있는 구간'만 표시
+    const speedBins = speedBinsAll.filter(bin=>{
+      let total = 0;
+      ageCols.forEach(a=> total += spMat.get(bin)?.get(a) || 0);
+      return total > 0;
+    });
+
+    // 행 합계(연령대별 총합) 계산
+    const ageTotalsT = new Map();
+    ageCols.forEach(a=>{
+      let tot = 0;
+      speedBins.forEach(b=> { tot += spMat.get(b)?.get(a) || 0; });
+      ageTotalsT.set(a, tot);
+    });
+
+    renderMatrixCountPctTotals(`table9_1_${idx}_${safeId(t)}`, ageCols, speedBins,
+      (age, bin)=> (spMat.get(bin)?.get(age)) || 0,
+      ageTotalsT
+    );
+    // 구분 헤더를 치료사명으로 변경
+    const _tbl = document.getElementById(`table9_1_${idx}_${safeId(t)}`);
+    const _th = _tbl && _tbl.querySelector('thead th');
+    if(_th) _th.textContent = t;
+  });
+})();
+
+
+      // 표 10: 진료실별 핵심지표 (신환 첫 치료 기준)
+      const roomKey = (p)=>{ const r = toStr(p.entryRoom).trim(); return r ? r : '미상'; };
+      const rooms = Array.from(new Set(cohort.map(roomKey))).sort((a,b)=>a.localeCompare(b,'ko'));
+      const t10 = [];
+      rooms.forEach(rm=>{
+        const ps = cohort.filter(p=>roomKey(p)===rm);
+        const nn = ps.length;
+        const c2 = ps.filter(p=>p.shockVisitCount>=2).length;
+        const c3 = ps.filter(p=>p.shockVisitCount>=3).length;
+        const inj = ps.filter(p=>p.hasInjection).length;
+        const sumV = ps.reduce((a,p)=>a+p.shockVisitCount,0);
+        const r7 = ps.filter(p => (p.daysTo2 !== null && p.daysTo2 <= 7)).length;
+        const r14 = ps.filter(p => (p.daysTo2 !== null && p.daysTo2 <= 14)).length;
+        t10.push({
+          '진료실': rm,
+          '신환 수': fmtInt(nn),
+          '2회차 전환율': nn?fmtPct(c2/nn):'0%',
+          '3회차 도달율': nn?fmtPct(c3/nn):'0%',
+          '주사 병행 비율': nn?fmtPct(inj/nn):'0%',
+          '평균 치료 횟수': nn?(sumV/nn).toFixed(1):'0.0',
+          '7일 내 재방문율': nn?fmtPct(r7/nn):'0%',
+          '14일 내 재방문율': nn?fmtPct(r14/nn):'0%',
+        });
+      });
+      // 총 합계
+      t10.push({
+        '진료실':'총 합계',
+        '신환 수': fmtInt(n),
+        '2회차 전환율': n?fmtPct(convN/n):'0%',
+        '3회차 도달율': n?fmtPct(r3N/n):'0%',
+        '주사 병행 비율': n?fmtPct(comboN/n):'0%',
+        '평균 치료 횟수': avgV.toFixed(1),
+        '7일 내 재방문율': n?fmtPct(r7N/n):'0%',
+        '14일 내 재방문율': n?fmtPct(r14N/n):'0%',
+        _rowClass:'total-row'
+      });
+
+      renderSimpleTable('table10',
+        [{k:'진료실',l:'진료실',w:90},
+         {k:'신환 수',l:'신환 수'},
+         {k:'2회차 전환율',l:'2회차 전환율'},
+         {k:'3회차 도달율',l:'3회차 도달율'},
+         {k:'주사 병행 비율',l:'주사 병행 비율'},
+         {k:'평균 치료 횟수',l:'평균 치료 횟수'},
+         {k:'7일 내 재방문율',l:'7일 내 재방문율'},
+         {k:'14일 내 재방문율',l:'14일 내 재방문율'}],
+        t10
+      );
+
+      // 표 11: 치료사별·연령대별 평균 치료 횟수
+      const ageSet = new Set(ageCols);
+      const getTAStat = (t,a)=>{
+        const ps = cohort.filter(p => p.therapist===t && ((p.ageBucket||'미상')===a));
+        const s = ps.reduce((x,p)=>x+p.shockVisitCount,0);
+        return {sum:s, n:ps.length};
+      };
+      renderMatrixAvg('table11', therapists, ageCols, getTAStat);
+
+      // 표 12: 치료사별·연령대별 치료 횟수 분포 (Follow-up 설계용)
+      // 표 12: 치료사별·연령대별 치료 횟수 분포 (치료사 1명당 표 1개)
+      const bins = ['1회만','2회만','3회만','4회만','5회 이상'];
+      const binOf = (c)=>{
+        if(c<=1) return '1회만';
+        if(c===2) return '2회만';
+        if(c===3) return '3회만';
+        if(c===4) return '4회만';
+        return '5회 이상';
+      };
+
+      const usedAges = new Set();
+      const tMap = new Map(); // therapist -> {therapist,totalN,m:Map}
+      cohort.forEach(p=>{
+        const t = p.therapist || '미상';
+        const a = AGE_BUCKETS.includes(p.ageBucket) ? p.ageBucket : '미상';
+        usedAges.add(a);
+        const b = binOf(p.shockVisitCount || 0);
+        if(!tMap.has(t)) tMap.set(t, {therapist:t, totalN:0, m:new Map()});
+        const o = tMap.get(t);
+        o.totalN += 1;
+        const k = b + '||' + a;
+        o.m.set(k, (o.m.get(k)||0) + 1);
+      });
+
+      const ageCols12 = AGE_BUCKETS.filter(a=>usedAges.has(a));
+
+      function buildTherapistDistTable(o){
+        const t = o.therapist || '미상';
+        let html = `<div class="miniCard">`;
+        html += `<div class="miniTitle"><span>${t}</span><span class="miniSub">신환 ${fmtCount(o.totalN,'명')}</span></div>`;
+        html += `<div class="table-scroll"><table class="mini-table"><thead><tr><th style="width:74px">치료 횟수</th>`;
+        ageCols12.forEach(a=>{ html += `<th>${a}</th>`; });
+        html += `<th style="width:72px">합계</th></tr></thead><tbody>`;
+
+        bins.forEach(b=>{
+          let rowSum = 0;
+          html += `<tr><td><b>${b}</b></td>`;
+          ageCols12.forEach(a=>{
+            const v = o.m.get(b+'||'+a) || 0;
+            rowSum += v;
+            html += `<td>${v?fmtInt(v):''}</td>`;
+          });
+          html += `<td><b>${rowSum?fmtInt(rowSum):''}</b></td></tr>`;
+        });
+
+        // totals row
+        html += `<tr class="total-row"><td><b>합계</b></td>`;
+        let grand = 0;
+        ageCols12.forEach(a=>{
+          let colSum = 0;
+          bins.forEach(b=>{ colSum += (o.m.get(b+'||'+a)||0); });
+          grand += colSum;
+          html += `<td><b>${colSum?fmtInt(colSum):''}</b></td>`;
+        });
+        html += `<td><b>${grand?fmtInt(grand):''}</b></td></tr>`;
+
+        html += `</tbody></table></div></div>`;
+        return html;
+      }
+
+      const therapistList = Array.from(tMap.values()).sort((a,b)=>toStr(a.therapist).localeCompare(toStr(b.therapist),'ko'));
+      if(therapistList.length===0){
+        setHtml('table12', '<div class="muted">표시할 데이터가 없습니다.</div>');
+      }else{
+        setHtml('table12', `<div class="subtablesGrid">` + therapistList.map(buildTherapistDistTable).join('') + `</div>`);
+      }
+
+      
+// 표 13: 치료사별·연령대별 재방문 안내 연락 시점 및 예약 확인(권장)
+const followMap = new Map();
+cohort.forEach(p=>{
+  const t = toStr(p.therapist).trim() || '미상';
+  const a = AGE_BUCKETS.includes(p.ageBucket) ? p.ageBucket : '미상';
+  const k = t + '||' + a;
+  if(!followMap.has(k)){
+    followMap.set(k, {치료사:t, 연령대:a, n:0, one:0, r7:0, r14:0, days:[]});
+  }
+  const o = followMap.get(k);
+  o.n += 1;
+  if(p.shockVisitCount === 1) o.one += 1;
+  if(p.daysTo2 !== null && isFinite(p.daysTo2)){
+    o.days.push(p.daysTo2);
+    if(p.daysTo2 <= 7) o.r7 += 1;
+    if(p.daysTo2 <= 14) o.r14 += 1;
+  }
+});
+
+const recFor = (n0, oneRate, r7Rate) => {
+  if(n0 < 5){
+    return {rec:'표본 적음(참고)', note:'표본 적음'};
+  }
+  if(oneRate >= 0.60 || r7Rate < 0.25){
+    return {rec:'첫 치료 후 48시간 안에 예약 확인 + 3일째/7일째 재방문 안내', note:''};
+  }
+  if(r7Rate < 0.40){
+    return {rec:'첫 치료 후 72시간 안에 예약 확인 + 7일째 재방문 안내', note:''};
+  }
+  return {rec:'미예약자는 7일 이내 재방문 안내 및 예약 확인', note:''};
+};
+const fmtMed = (m) => (m===null || m===undefined) ? '-' : (Math.round(m) + '일');
+
+// used age columns
+const usedAges13 = new Set();
+followMap.forEach(o=>{
+  if(AGE_BUCKETS.includes(o.연령대)) usedAges13.add(o.연령대);
+});
+const ageCols13 = AGE_BUCKETS.filter(a=>usedAges13.has(a));
+const finalAgeCols13 = (ageCols13 && ageCols13.length) ? ageCols13 : AGE_BUCKETS.filter(a=>a!=='미상');
+
+// therapist -> byAge
+const t13Map = new Map();
+followMap.forEach(o=>{
+  const t = o.치료사;
+  if(!t13Map.has(t)) t13Map.set(t, {therapist:t, byAge:new Map()});
+  t13Map.get(t).byAge.set(o.연령대, o);
+});
+
+function buildTherapistFollowTable(tObj){
+  const cols = finalAgeCols13;
+  let totN = 0, totOne = 0, totR7 = 0, totR14 = 0;
+  let allDays = [];
+  cols.forEach(a=>{
+    const o = tObj.byAge.get(a);
+    if(!o) return;
+    totN += (o.n||0);
+    totOne += (o.one||0);
+    totR7 += (o.r7||0);
+    totR14 += (o.r14||0);
+    if(o.days && o.days.length) allDays = allDays.concat(o.days);
+  });
+  const oneRateT = totN ? (totOne/totN) : 0;
+  const r7RateT  = totN ? (totR7/totN) : 0;
+  const r14RateT = totN ? (totR14/totN) : 0;
+  const medT = allDays.length ? median(allDays) : null;
+  const recT = recFor(totN, oneRateT, r7RateT);
+
+  const thead = `<thead><tr><th style="width:160px;">${toStr(tObj.therapist)}</th>` +
+    cols.map(c=>`<th>${c}</th>`).join('') +
+    `<th class="total-col">전체</th></tr></thead>`;
+
+  const td = (v)=>`<td>${v===null||v===undefined||v===''?'-':v}</td>`;
+
+  const row = (label, cellFn, totalVal) => {
+    let cells = '';
+    cols.forEach(a=>{
+      const o = tObj.byAge.get(a);
+      cells += td(cellFn(o));
+    });
+    cells += `<td class="total-col">${totalVal}</td>`;
+    return `<tr><td class="kpiRowLabel">${label}</td>${cells}</tr>`;
+  };
+
+  const tbody = `<tbody>` +
+    row('신환 수(명)', o => o ? fmtInt(o.n||0) : '-', `<b>${fmtInt(totN)}</b>`) +
+    row('1회만 내원 비율', o => {
+        if(!o || !o.n) return '-';
+        return fmtPct((o.one||0)/(o.n||1));
+      }, `<b>${fmtPct(oneRateT)}</b>`) +
+    row('7일 내 재방문율', o => {
+        if(!o || !o.n) return '-';
+        return fmtPct((o.r7||0)/(o.n||1));
+      }, `<b>${fmtPct(r7RateT)}</b>`) +
+    row('14일 내 재방문율', o => {
+        if(!o || !o.n) return '-';
+        return fmtPct((o.r14||0)/(o.n||1));
+      }, `<b>${fmtPct(r14RateT)}</b>`) +
+    row('2회차 재방문 주기(중간값)', o => {
+        if(!o || !o.n) return '-';
+        const m = (o.days && o.days.length) ? median(o.days) : null;
+        return fmtMed(m);
+      }, `<b>${fmtMed(medT)}</b>`) +
+    row('권장 연락', o => {
+        if(!o || !o.n) return '-';
+        const oneR = (o.one||0)/(o.n||1);
+        const r7R = (o.r7||0)/(o.n||1);
+        return recFor(o.n||0, oneR, r7R).rec;
+      }, `<b>${recT.rec}</b>`) +
+    `</tbody>`;
+
+  return `
+    <div class="subtableCard">
+      <div style="overflow-x:auto;">
+        <table>${thead}${tbody}</table>
+      </div>
+    </div>
+  `;
+}
+
+
+const t13List = Array.from(t13Map.values()).sort((a,b)=>toStr(a.therapist).localeCompare(toStr(b.therapist),'ko'));
+if(t13List.length===0){
+  setHtml('table13', '<div class="muted">표시할 데이터가 없습니다.</div>');
+}else{
+  setHtml('table13', `<div class="subtablesGrid">` + t13List.map(buildTherapistFollowTable).join('') + `</div>`);
+}
+
+// 요약(Top 5) 계산용 rows
+const followRows = Array.from(followMap.values()).map(o=>{
+  const n0 = o.n || 0;
+  const oneRate = n0 ? (o.one/n0) : 0;
+  const r7Rate = n0 ? (o.r7/n0) : 0;
+  const r14Rate = n0 ? (o.r14/n0) : 0;
+  const med = o.days.length ? median(o.days) : null;
+  const rec = recFor(n0, oneRate, r7Rate);
+  return {
+    '치료사': o.치료사,
+    '연령대': o.연령대,
+    '권장 연락': rec.rec,
+    '비고': rec.note,
+    _n: n0,
+    _oneRate: oneRate,
+    _r7: r7Rate,
+    _r14: r14Rate,
+    _med: med,
+    _score: ((oneRate||0)*0.55 + (1-(r7Rate||0))*0.35 + (med===null?0:Math.min(1, med/14))*0.10)
+  };
+});
+
+// 표 13 하단: 재방문 관리 요약(Top 5)
+renderFollowSummary(followRows, 'followSummary13');
+
+// 제안서 텍스트 (조건에 따라 자동 확장, 줄 수 제한 없음)
+      const lines = [];
+      const marks = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+      const addLine = (htmlLine)=>{
+        const m = marks[lines.length] || ((lines.length+1) + '.');
+        lines.push(`${m} ${htmlLine}`);
+      };
+
+      if(n===0){
+        addLine("선택된 조건에 해당하는 신환(충격파) 데이터가 없습니다. 치료금액 필터를 '전체'로 바꾸거나 원본 데이터를 확인해주세요.");
+      }else{
+        // 기본 5줄 (항상 제공)
+        addLine(`<b>2회차 전환율</b>은 <b>${fmtPct(convN/n)}</b> 입니다. <u>첫 치료 당일에 2회차 예약을 선점</u>하고, 미예약자는 <u>재방문 안내 연락 시점(7~10일) 및 예약 확인</u>를 권장합니다.`);
+        addLine(`<b>3회차 도달율</b>은 <b>${fmtPct(r3N/n)}</b> 입니다. <u>4주 내 5회 치료</u>를 목표로, 초진에서 <u>5회 계획(일정)</u>을 먼저 확정하고 <u>3회차는 중간 관문</u>으로 관리하세요. 치료 횟수별로 <u>통증/기능 지표</u>를 기록해 동기부여를 강화하면 5회 도달률을 끌어올릴 수 있습니다.`);
+        addLine(`<b>주사치료 병행 비율</b>은 <b>${fmtPct(comboN/n)}</b> 입니다. 병행 비중이 높으면 <u>동의/안내/진료 안내 기준</u>을 표준화해 CS를 줄이고, 병행 기준을 팀 내 합의로 정리하세요.`);
+        addLine(`<b>7일 내 재방문율</b>은 <b>${fmtPct(r7N/n)}</b>, <b>14일 내 재방문율</b>은 <b>${fmtPct(r14N/n)}</b> 입니다. 7일이 낮고 14일만 높은 경우, <u>예약 대기기간</u>과 <u>스케줄 병목</u>을 우선 점검하세요.`);
+        addLine(`치료사별(표 8)로 전환/유지 편차가 크면, <u>초진 설명 문구</u>와 <u>치료 횟수별 목표/기록 템플릿</u>을 통일해 성과를 평준화하는 것이 1순위입니다.`);
+        addLine(`<b>치료사별 신환/재진 예약 비율(표 8-1)</b>을 함께 보세요. 신환 예약이 낮으면 <u>초진 당일 예약확정</u>과 <u>미예약자 재방문 안내 연락 시점(7~10일) 및 예약 확인</u>을 표준 프로세스로 두는 것이 효과적입니다.`);
+        addLine(`<b>진료실별 핵심지표(표 10)</b>에서 병목이 생기는 진료실이 있으면, <u>진료실별 슬롯(가용시간)·동선·보조인력 배치</u>를 먼저 손보는 것이 전환 개선에 빠릅니다.`);
+        addLine(`<b>치료사·연령대별 평균/분포(표 11~12)</b>를 기준으로, <u>연령대별 설명 난이도</u>와 <u>follow-up(재방문 안내 연락 시점 및 예약 확인)</u> 메시지를 표준화하면 ‘우연한 성과’를 ‘재현 가능한 성과’로 만들 수 있습니다.`);
+
+        // ---- 추가 인사이트 (조건 충족 시 6~10줄로 확장)
+        const oneN = cohort.filter(p => p.shockVisitCount === 1).length;
+        if(oneN/n >= 0.35){
+          addLine(`<b>1회 종료 비중</b>이 높습니다(<b>${fmtPct(oneN/n)}</b>). 초진에서 <u>‘왜 4주 내 5회가 필요한지’</u>를 구조적으로 설명하고, <u>2회차 예약/결제 동선</u>을 단순화하세요.`);
+        }
+
+        // 치료사 편차(2회차 전환율 기준)
+        const tStats = Array.from(new Set(cohort.map(p=>p.therapist))).map(t=>{
+          const ps = cohort.filter(p=>p.therapist===t);
+          const nn = ps.length;
+          const cc2 = ps.filter(p=>p.shockVisitCount>=2).length;
+          const rr3 = ps.filter(p=>p.shockVisitCount>=3).length;
+          return {t, n: nn, c2: nn?cc2/nn:0, r3: nn?rr3/nn:0};
+        }).filter(x=>x.n>=5); // 표본 너무 작은 치료사 제외
+        if(tStats.length>=2){
+          const maxC2 = Math.max(...tStats.map(x=>x.c2));
+          const minC2 = Math.min(...tStats.map(x=>x.c2));
+          if((maxC2 - minC2) >= 0.20){
+            const best = tStats.reduce((a,b)=> b.c2>a.c2?b:a, tStats[0]);
+            const worst = tStats.reduce((a,b)=> b.c2<a.c2?b:a, tStats[0]);
+            addLine(`치료사별 <b>2회차 전환율 편차</b>가 큽니다(<b>${fmtPct(maxC2)}</b> vs <b>${fmtPct(minC2)}</b>). <u>${best.t}</u>의 초진 운영을 좋은 사례로 참고하고, <u>${worst.t}</u> 구간은 예약/설명/기록을 코칭하세요.`);
+          }
+        }
+
+        // 연령대별 병목(2회차 전환율 최저 연령대)
+        const aStats = ageCols.map(a=>{
+          const ps = cohort.filter(p => (p.ageBucket||'미상') === a);
+          const nn = ps.length;
+          const cc2 = ps.filter(p=>p.shockVisitCount>=2).length;
+          const rr7 = ps.filter(p=>p.daysTo2!==null && p.daysTo2<=7).length;
+          return {a, n: nn, c2: nn?cc2/nn:0, r7: nn?rr7/nn:0};
+        }).filter(x=>x.n>=10);
+        if(aStats.length){
+          const worst = aStats.reduce((a,b)=> b.c2<a.c2?b:a, aStats[0]);
+          addLine(`<b>${worst.a}</b>에서 <b>2회차 전환</b>이 상대적으로 약합니다. 이 연령대는 <u>예약 시간대(야간/주말)</u>와 <u>커뮤니케이션 채널(SMS/카톡)</u>을 최적화해 개선 여지가 큽니다.`);
+        }
+
+        // 치료부위 집중도(상위 1~2개 부위 비중)
+        const partCount = new Map();
+        cohort.forEach(p=>{
+          const parts = new Set();
+          p.rows.filter(r=>isShock(r.typeRaw)).forEach(r=>{
+            extractParts(r.part).forEach(x=>parts.add(x));
+          });
+          parts.forEach(pt=>{
+            partCount.set(pt, (partCount.get(pt)||0) + 1);
+          });
+        });
+        const topParts = Array.from(partCount.entries()).filter(([k,v])=>k && k!=='(미기입)').sort((a,b)=>b[1]-a[1]).slice(0,2);
+        if(topParts.length){
+          const p1 = topParts[0];
+          const p2 = topParts[1];
+          const p1Pct = fmtPct(p1[1]/n);
+          const p2Pct = p2 ? fmtPct(p2[1]/n) : null;
+          addLine(`주요 치료부위는 <b>${p1[0]}</b>(<b>${p1Pct}</b>)${p2?` · <b>${p2[0]}</b>(<b>${p2Pct}</b>)`:''} 입니다. 상위 부위는 <u>평가/설명 자료</u>와 <u>패키지 구성</u>을 표준화하면 전환 개선 효과가 큽니다.`);
+        }
+      }
+
+      // 최소 5줄 보장
+      while(lines.length < 5 && n>0){
+        addLine("표 1~9의 분포를 확인해 <u>전환이 약한 구간</u>부터 우선순위로 개선안을 적용하세요.");
+      }
+      const finalLines = lines;
+
+document.getElementById('analysisText').innerHTML = finalLines.map(x=>`<div style="margin:4px 0;">${x}</div>`).join('');
+    }
+  
+
+
+
+
+// -----------------------------
+// Service(무료) 금액 선택 + 전환 지표(표 1-3~1-6)
+// -----------------------------
+function _svcLabel(){
+  const arr = Array.from(serviceAmtSet||[]).filter(v=>isFinite(v)).sort((a,b)=>a-b);
+  if(!arr.length) return '미선택';
+  return arr.map(v => (v===0 ? '0원(기타)' : (v.toLocaleString()+'원'))).join(', ');
+}
+
+function _primaryEntryAmt(p){
+  if(!p || p.firstShockKey===null || p.firstShockKey===undefined) return null;
+  const k = p.firstShockKey;
+  const rows = (p.rows||[]).filter(r=>isShock(r.typeRaw) && isFinite(r.visitKey) && r.visitKey===k);
+  let am = rows.map(r=>r.amount).filter(v=>isFinite(v));
+  if(am.length) return Math.max(...am);
+  const rows2 = (p.rows||[]).filter(r=>isFinite(r.visitKey) && r.visitKey===k);
+  am = rows2.map(r=>r.amount).filter(v=>isFinite(v));
+  return am.length ? Math.max(...am) : null;
+}
+
+function _serviceInfo(p){
+  const entry = _primaryEntryAmt(p);
+  const start = (serviceAmtSet && serviceAmtSet.size) ? (isFinite(entry) && serviceAmtSet.has(entry)) : false;
+  if(!start) return {serviceStart:false, serviceEntry: entry, converted:false, conversionTo:null, daysToPaid:null};
+
+  const startKey = p.firstShockKey;
+  const vks = Array.from(new Set((p.rows||[]).filter(r=>isShock(r.typeRaw) && isFinite(r.visitKey)).map(r=>r.visitKey))).sort((a,b)=>a-b);
+
+  let convKey = null;
+  let convTo = null;
+
+  for(const vk of vks){
+    if(!isFinite(vk) || vk<=startKey) continue;
+    const rows = (p.rows||[]).filter(r=>isShock(r.typeRaw) && isFinite(r.visitKey) && r.visitKey===vk);
+    const am = rows.map(r=>r.amount).filter(v=>isFinite(v));
+    if(!am.length) continue;
+    const mx = Math.max(...am);
+    if(!isFinite(mx) || mx<=0) continue;
+    if(serviceAmtSet.has(mx)) continue;
+    convKey = vk;
+    const nfRow = rows.find(r=>toStr(r.newFlag).includes('신환') || toStr(r.newFlag).includes('재진'));
+    const nf = nfRow ? toStr(nfRow.newFlag) : '';
+    convTo = nf.includes('신환') ? '신환' : (nf.includes('재진') ? '재진' : '유료');
+    break;
+  }
+
+  const days = (convKey!==null && isFinite(startKey)) ? Math.round((convKey - startKey)/86400000) : null;
+  return {serviceStart:true, serviceEntry: entry, converted: !!convKey, conversionTo: convTo, daysToPaid: days};
+}
+
+function _setServiceTitles(){
+  const label = _svcLabel();
+  const rep = (txt, no) => txt.replace(new RegExp(`표 ${no}\.\s*(Free\(기타여부\)|서비스\(선택 금액\)|서비스\([^\)]*\))`,'g'), `표 ${no}. 서비스(${label})`);
+  document.querySelectorAll('#mainContent h2').forEach(h=>{
+    const t = (h.textContent||'');
+    if(t.includes('표 1-3.')) h.textContent = rep(t,'1-3');
+    if(t.includes('표 1-4.')) h.textContent = rep(t,'1-4');
+    if(t.includes('표 1-5.')) h.textContent = rep(t,'1-5');
+    if(t.includes('표 1-6.')) h.textContent = rep(t,'1-6');
+  });
+}
+
+function renderServiceConversionTables(){
+  const hasSvc = serviceAmtSet && serviceAmtSet.size;
+  const cards = document.querySelectorAll('.free-card-main, .free-card-extra');
+  if(!hasSvc){
+    cards.forEach(el=>el.style.display='none');
+    return;
+  }
+  cards.forEach(el=>el.style.display='');
+
+  _setServiceTitles();
+
+  const actAll = (typeof patientsAfterFreeExclusion === 'function') ? patientsAfterFreeExclusion() : (patientsAll||[]);
+  const svcAll = actAll.filter(p => _serviceInfo(p).serviceStart);
+  const infoMap = new Map();
+  svcAll.forEach(p => infoMap.set(p.key, _serviceInfo(p)));
+
+  const svcN = svcAll.length;
+  const svcConv = svcAll.filter(p => infoMap.get(p.key).converted);
+  const svcConvN = svcConv.length;
+  const svcRate = svcN ? (svcConvN / svcN) : 0;
+
+  const toNew = svcConv.filter(p => (infoMap.get(p.key).conversionTo||'').includes('신환')).length;
+  const toRe  = svcConv.filter(p => (infoMap.get(p.key).conversionTo||'').includes('재진')).length;
+
+  const daysArr = svcConv.map(p => infoMap.get(p.key).daysToPaid).filter(v=>isFinite(v) && v>=0);
+  const avgDays = daysArr.length ? (daysArr.reduce((a,b)=>a+b,0)/daysArr.length) : null;
+  const medDays = daysArr.length ? median(daysArr) : null;
+  const minDays = daysArr.length ? Math.min(...daysArr) : null;
+  const maxDays = daysArr.length ? Math.max(...daysArr) : null;
+
+  renderKeyValueTable('table1c', [
+    {k:'서비스 금액 선택', v: _svcLabel()},
+    {k:'서비스 시작(첫 방문 치료금액 기준)', v: `${fmtCount(svcN,'명')}`},
+    {k:'서비스 → 유료 전환율', v: svcN ? `${fmtPct(svcRate)}` : '-'},
+    {k:'전환 인원', v: `${fmtCount(svcConvN,'명')}`},
+    {k:'전환 유형', v: `신환 ${fmtCount(toNew,'명')} / 재진 ${fmtCount(toRe,'명')}`},
+    {k:'전환까지 소요일(방문일)', v: daysArr.length ? `평균 ${avgDays.toFixed(1)}일 / 중간 ${medDays}일 (최소 ${minDays}~최대 ${maxDays})` : '-'}
+  ]);
+
+  setFreeSectionExpanded(!!svcN);
+
+  // 연령대별
+  const ageRows = [];
+  AGE_BUCKETS.forEach(a=>{
+    const ps = svcAll.filter(p => (p.ageBucket||'미상')===a);
+    const fn = ps.length;
+    const cn = ps.filter(p=>infoMap.get(p.key).converted).length;
+    ageRows.push({
+      '연령대': a,
+      '서비스 시작': `${fmtCount(fn,'명')}`,
+      '전환': `${fmtCount(cn,'명')}`,
+      '전환율': fn ? fmtPct(cn/fn) : '-'
+    });
+  });
+  renderSimpleTable('table1d', [
+    {k:'연령대',l:'연령대',w:90},
+    {k:'서비스 시작',l:'서비스 시작'},
+    {k:'전환',l:'전환'},
+    {k:'전환율',l:'전환율'}
+  ], ageRows);
+
+  // 부위별
+  // (Fix) PARTS is block-scoped in other render functions; use a safe local list here to avoid ReferenceError.
+  const _PARTS_LOCAL = (typeof _PARTS_FOR_SERVICE !== 'undefined' && Array.isArray(_PARTS_FOR_SERVICE) && _PARTS_FOR_SERVICE.length)
+    ? _PARTS_FOR_SERVICE
+    : ['목','등','허리','어깨','팔꿈치','손목/손','골반/고관절','무릎','발목/발','기타'];
+  const partMap = new Map(_PARTS_LOCAL.map(p=>[p,{svc:0, conv:0}]));
+  const addPart = (part, isConv)=>{
+    const k = _PARTS_LOCAL.includes(part) ? part : (part==='(미기입)' ? '(미기입)' : '기타');
+    if(!partMap.has(k)) partMap.set(k,{svc:0,conv:0});
+    const o = partMap.get(k);
+    o.svc += 1;
+    if(isConv) o.conv += 1;
+  };
+  svcAll.forEach(p=>{
+    const baseRows = (p.firstShockKey!==null)
+      ? p.rows.filter(r=>isShock(r.typeRaw) && isFinite(r.visitKey) && (Number(r.visitKey)===Number(p.firstShockKey)))
+      : p.rows.filter(r=>isShock(r.typeRaw));
+    let parts = [];
+    baseRows.forEach(r=>{ parts = parts.concat(extractParts(r.part)); });
+    const uniq = Array.from(new Set(parts.length?parts:['(미기입)']));
+    const isConv = infoMap.get(p.key).converted;
+    uniq.forEach(pt=>addPart(pt, isConv));
+  });
+  const partRows = Array.from(partMap.entries()).map(([pt,o])=>({
+    '부위': pt,
+    '서비스 시작': `${fmtCount(o.svc,'명')}`,
+    '전환': `${fmtCount(o.conv,'명')}`,
+    '전환율': o.svc ? fmtPct(o.conv/o.svc) : '-'
+  }));
+  renderSimpleTable('table1e', [
+    {k:'부위',l:'부위',w:110},
+    {k:'서비스 시작',l:'서비스 시작'},
+    {k:'전환',l:'전환'},
+    {k:'전환율',l:'전환율'}
+  ], partRows);
+
+  // 치료사별
+  const therMap = new Map();
+  svcAll.forEach(p=>{
+    const t = (p.therapist||'미기입');
+    if(!therMap.has(t)) therMap.set(t,{svc:0,conv:0});
+    const o = therMap.get(t);
+    o.svc += 1;
+    if(infoMap.get(p.key).converted) o.conv += 1;
+  });
+  const therRows = Array.from(therMap.entries()).sort((a,b)=>a[0].localeCompare(b[0],'ko')).map(([t,o])=>({
+    '치료사': t,
+    '서비스 시작': `${fmtCount(o.svc,'명')}`,
+    '전환': `${fmtCount(o.conv,'명')}`,
+    '전환율': o.svc ? fmtPct(o.conv/o.svc) : '-'
+  }));
+  renderSimpleTable('table1f', [
+    {k:'치료사',l:'치료사',w:90},
+    {k:'서비스 시작',l:'서비스 시작'},
+    {k:'전환',l:'전환'},
+    {k:'전환율',l:'전환율'}
+  ], therRows);
+}
+
+// wrap renderAll so 서비스 전환표/설명 자동 갱신
+(function(){
+  if(typeof renderAll !== 'function') return;
+  const _base = renderAll;
+  renderAll = function(){
+    _base();
+    try{ renderServiceConversionTables(); }catch(e){}
+  };
+})();
+
+// -----------------------------
+// Metric help modal: 표 목록/용어 자동 생성
+// -----------------------------
+function renderMetricHelp(){
+  const box = document.getElementById('metricHelpContent');
+  if(!box) return;
+
+  const terms = [
+    ['환자 기준', '같은 사람이 여러 번 와도 1명으로 셈.'],
+    ['방문 기준(회차/내원 기준)', '같은 사람이 5번 오면 5건으로 셈.'],
+    ['회차', '같은 환자의 내원 순서(1회차=첫 방문).'],
+    ['당월 신환 기준(cohort)', '이번 파일에서 신환으로 시작한 환자 집합(83명 등).'],
+    ['도달률(누적)', '예) 4회차 도달률 = 4회차 이상 도달한 환자 비율.'],
+    ['재방문율(D+3/7/14)', '첫 치료일 기준으로 2회차가 D+3/7/14일 이내에 발생한 비율.'],
+    ['서비스 금액', '0원(기타) 또는 특정 금액(예: 40,000원)을 “무료/서비스”로 간주하도록 선택한 금액.'],
+    ['서비스 → 유료 전환', '서비스 금액으로 시작한 환자가 이후 방문에서 “서비스 금액이 아닌 금액”을 낸 경우(첫 발생 기준).'],
+    ['예약 O/X', '방문(회차) 단위로 집계. 같은 방문에 O와 X가 함께 있으면 O 우선.'],
+    ['전환율', '특정 조건(A)을 만족한 대상 중 B로 넘어간 비율. 예) 2회차 전환율 = 신환 중 2회차 이상 방문한 비율.'],
+    ['중앙값(중간값)', '정렬했을 때 가운데 값(극단값 영향이 적음).'],
+    ['최빈값', '가장 자주 나타나는 값.'],
+    ['미기입', '해당 항목(예: 예약 O/X)이 비어있어 O/X로 판단할 수 없는 경우.'],
+    ['총 합계(고유)', '환자 수는 중복 제거한 고유 인원으로 표시(부위는 중복 가능).']
+  ];
+
+  const tableTitles = Array.from(document.querySelectorAll('#mainContent .card h2'))
+    .map(h=> (h.textContent||'').trim())
+    .filter(Boolean);
+
+  const tableExplain = (title)=>{
+    if(title.startsWith('표 1-0')) return '부위별 요약(당월 신환 기준). 총 합계의 “환자 수”는 고유 신환 수로 표시.';
+    if(title.startsWith('표 1.')) return '부위별 치료 건수/환자수/평균 회차 등을 보여줌.';
+    if(title.startsWith('표 2.')) return '신환 상세 통계(재방문/전환/분포 등) 요약.';
+    if(title.startsWith('표 6-1')) return '연령대별 회차 도달률(누적).';
+    if(title.startsWith('표 8-1')) return '치료사별 신환/재진 예약 비율(당월 신환 기준).';
+    if(title.startsWith('표 8-2')) return '치료사별 신환/재진 예약 비율(기존 재진 포함).';
+    if(title.startsWith('표 9.')) return '첫 치료→2회차 재방문 주기 분포(0~3일 포함).';
+    if(title.startsWith('표 1-1A')) return '치료사×부위별로 “환자당 평균 치료횟수(회)”를 요약(환자 기준).';
+    if(title.startsWith('표 1-1')) return '치료사×부위별 “치료 횟수(건)”를 집계(방문/회차 기준).';
+    if(title.startsWith('표 1-2')) return '치료사별 전체 치료 중 부위별 비중(합계 100%).';
+    if(title.startsWith('표 1-7')) return '치료사×부위별 3회차 도달률(3회 이상 도달 비율, 환자 기준).';
+    if(title.startsWith('표 3.')) return '연령대별 치료 “건수”와 성별(남/여) 비중을 함께 표시(방문 기준).';
+    if(title.startsWith('표 5.')) return '환자별 총 치료횟수(1회만/2회만/…/5회 이상) 분포를 연령대별로 표시(환자 기준).';
+    if(title.startsWith('표 6.')) return '연령대별 치료횟수 분포와 비율(표 5의 연령대별 요약).';
+    if(title.startsWith('표 7.')) return '치료 금액 구간(선택/제외 필터 적용)별 핵심 지표 요약(전환/재방문/도달 등).';
+
+    if(title.startsWith('표 1-3')||title.startsWith('표 1-4')||title.startsWith('표 1-5')||title.startsWith('표 1-6')) return '서비스 금액 선택을 기준으로 서비스 시작 인원과 유료 전환을 요약/세분화(연령/부위/치료사).';
+    return `이 표는 “${title}”의 내용을 요약해 보여줍니다.`;
+  };
+
+  const termsHtml = terms.map(([k,v])=>`<li><b>${k}</b>: ${v}</li>`).join('');
+  const svcLabel = _svcLabel();
+  const tablesHtml = tableTitles.map(t=>`<li style="margin:6px 0;"><div><b>${t}</b></div><div style="color:var(--gray);font-size:12px;margin-top:2px;">${tableExplain(t)}</div></li>`).join('');
+
+  box.innerHTML = `
+    <div class="help-section">
+      <h3>현재 설정</h3>
+      <ul>
+        <li><b>서비스 금액 선택</b>: ${svcLabel}</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <h3>핵심 용어</h3>
+      <ul>${termsHtml}</ul>
+    </div>
+    <div class="help-section">
+      <h3>표 설명</h3>
+      <ul style="padding-left:18px;margin:0;">${tablesHtml}</ul>
+    </div>
+  `;
+}
+
+// Metric help modal handlers
+(function(){
+  const btn = document.getElementById('openMetricHelp');
+  const modal = document.getElementById('metricHelpModal');
+  const closeBtn = document.getElementById('closeMetricHelp');
+  if(!btn || !modal) return;
+
+  function openModal(){
+    try{ renderMetricHelp(); }catch(e){}
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(){
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+
+  btn.addEventListener('click', openModal);
+  if(closeBtn) closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && modal.style.display !== 'none') closeModal(); });
+})();
+
+</script>
+
+<script>
+(function(){
+  const THEME_KEY = 'jinsul-nonpay-analysis-theme';
+  function setTheme(theme){
+    const next = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem(THEME_KEY, next);
+    const btn = document.getElementById('jinsulThemeToggle');
+    if(btn){
+      btn.textContent = next === 'dark' ? '☀ 라이트모드' : '🌙 다크모드';
+      btn.setAttribute('aria-label', next === 'dark' ? '라이트모드로 전환' : '다크모드로 전환');
+    }
+  }
+  window.jinsulToggleTheme = function(){
+    const cur = document.documentElement.getAttribute('data-theme') || 'light';
+    setTheme(cur === 'dark' ? 'light' : 'dark');
+  };
+  window.jinsulGoBack = function(){
+    if(document.referrer && document.referrer !== location.href){
+      history.back();
+    }else{
+      location.href = 'index.html';
+    }
+  };
+  const saved = localStorage.getItem(THEME_KEY) || 'light';
+  setTheme(saved);
+})();
+</script>
+
+</body>
+</html>
