@@ -6,6 +6,58 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <style>
+
+.header{
+    position:sticky;
+    top:0;
+    z-index:999;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:14px 28px;
+
+    background:rgba(15,15,15,.78);
+    backdrop-filter:blur(18px);
+
+    border-bottom:1px solid rgba(190,169,139,.18);
+}
+
+.header-right{
+    display:flex;
+    gap:12px;
+}
+
+.header-btn{
+
+    height:44px;
+    padding:0 20px;
+
+    border-radius:18px;
+
+    border:1px solid rgba(190,169,139,.35);
+
+    background:rgba(255,255,255,.06);
+
+    color:#f4ede2;
+
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:.25s;
+}
+
+.header-btn:hover{
+
+    transform:translateY(-2px);
+
+    background:rgba(190,169,139,.15);
+
+    border-color:#bea98b;
+
+}
 * {
   box-sizing: border-box;
   font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -229,11 +281,23 @@ footer {
 </head>
 
 <body>
-  <div class="top-actions">
-    <button class="nav-btn" onclick="goBack()">
-        ⬅ 뒤로가기
-    </button>
-</div>
+<header class="header">
+    <div class="header-left">
+        <img src="진설로고.png" class="logo">
+    </div>
+
+    <div class="header-right">
+
+        <button class="header-btn" onclick="history.back()">
+            ← 뒤로가기
+        </button>
+
+        <button class="header-btn" onclick="toggleTheme()">
+            🌙 다크모드
+        </button>
+
+    </div>
+</header>
   <main class="wrap">
 
     <section class="header">
