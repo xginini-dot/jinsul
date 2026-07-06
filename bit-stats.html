@@ -1392,7 +1392,7 @@
       document.getElementById('kpiTotalVisits').textContent=formatCell(overall['총내원수']);
       const avgVisit = overall['환자당 평균 내원횟수'];
       const avgEl = document.getElementById('kpiAvgVisitPerPatient');
-      if(avgEl) avgEl.textContent = `환자당 평균 ${formatCell(avgVisit)}회`;
+      if(avgEl) avgEl.textContent = `환자당 평균 내원횟수 ${formatCell(avgVisit)}회`;
       document.getElementById('kpiFirst').textContent=formatCell(overall['초진']);
       document.getElementById('kpiInjRate').textContent=formatCell(overall['초진 주사처방률']);
       document.getElementById('kpiVisitAvg').textContent=formatCell(overall['초진 평균 내원횟수']);
