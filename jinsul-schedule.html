@@ -217,7 +217,7 @@ body.dark-mode .util-btn{background:#111827;color:#e5e7eb;border-color:#475569}
     <div class="brand-row">
       <div class="brand-copy">
         <div class="brand-mark">
-          <div class="logo-box"><img id="jinsulLogo" src="https://raw.githubusercontent.com/xginini-dot/jinsul/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png" alt="JINSUL 로고" loading="eager"></div>
+          <div class="logo-box"><img id="jinsulLogo" src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png" alt="JINSUL 로고" loading="eager"></div>
           <div class="company">
             <div class="en">JINSUL</div>
             <div class="ko">경험과 가치를 현실화 하는 컨설팅</div>
@@ -358,6 +358,88 @@ function cellRaw(ws, r, c) {
   return cell ? cell.v : '';
 }
 
+function colNameToIndex(col) {
+  let n = 0;
+  String(col || '').toUpperCase().split('').forEach(ch => { n = n * 26 + (ch.charCodeAt(0) - 64); });
+  return n - 1;
+}
+function getSheetByName(wb, name) {
+  if (!wb || !name) return null;
+  return wb.Sheets[name] || wb.Sheets[String(name).replace(/^'|'$/g,'')] || null;
+}
+function normalizeFormula(f) {
+  return String(f || '').trim().replace(/^=/, '');
+}
+function formulaRefParts(formula) {
+  const f = normalizeFormula(formula);
+  let m = f.match(/^'([^']+)'!\$?([A-Z]+)\$?(\d+)$/i);
+  if (m) return { sheet:m[1], col:colNameToIndex(m[2]), row:Number(m[3])-1 };
+  m = f.match(/^([^'!]+)!\$?([A-Z]+)\$?(\d+)$/i);
+  if (m) return { sheet:m[1], col:colNameToIndex(m[2]), row:Number(m[3])-1 };
+  m = f.match(/^\$?([A-Z]+)\$?(\d+)$/i);
+  if (m) return { sheet:null, col:colNameToIndex(m[1]), row:Number(m[2])-1 };
+  return null;
+}
+function addDaysToValue(v, days) {
+  if (v instanceof Date && !isNaN(v)) {
+    const d = new Date(v.getFullYear(), v.getMonth(), v.getDate() + days);
+    return d;
+  }
+  if (typeof v === 'number' && isFinite(v)) return v + days;
+  const ds = dateToYMD(v);
+  if (ds) return addDaysYMD(ds, days);
+  return v;
+}
+function resolveCellValue(wb, sheetName, ws, r, c, depth=0) {
+  if (depth > 30) return '';
+  const cell = cellObj(ws, r, c);
+  if (!cell) return '';
+  const f = normalizeFormula(cell.f || (typeof cell.v === 'string' && String(cell.v).startsWith('=') ? cell.v : ''));
+  if (f) {
+    // 단순 참조: ='26년 5월'!H132, =C5
+    const ref = formulaRefParts(f);
+    if (ref) {
+      const targetSheetName = ref.sheet || sheetName;
+      const targetWs = getSheetByName(wb, targetSheetName) || ws;
+      return resolveCellValue(wb, targetSheetName, targetWs, ref.row, ref.col, depth + 1);
+    }
+    // 날짜 수식: =C5+1, ='26년 5월'!I5+1
+    let m = f.match(/^(?:'([^']+)'!|([^'!]+)!)?\$?([A-Z]+)\$?(\d+)\s*\+\s*(\d+)$/i);
+    if (m) {
+      const targetSheetName = m[1] || m[2] || sheetName;
+      const targetWs = getSheetByName(wb, targetSheetName) || ws;
+      const base = resolveCellValue(wb, targetSheetName, targetWs, Number(m[4])-1, colNameToIndex(m[3]), depth + 1);
+      return addDaysToValue(base, Number(m[5]));
+    }
+    // 날짜 수식: =C5-1
+    m = f.match(/^(?:'([^']+)'!|([^'!]+)!)?\$?([A-Z]+)\$?(\d+)\s*-\s*(\d+)$/i);
+    if (m) {
+      const targetSheetName = m[1] || m[2] || sheetName;
+      const targetWs = getSheetByName(wb, targetSheetName) || ws;
+      const base = resolveCellValue(wb, targetSheetName, targetWs, Number(m[4])-1, colNameToIndex(m[3]), depth + 1);
+      return addDaysToValue(base, -Number(m[5]));
+    }
+  }
+  if (cell.v !== undefined && cell.v !== null && !(typeof cell.v === 'string' && String(cell.v).startsWith('='))) return cell.v;
+  if (cell.w !== undefined && cell.w !== null) return cell.w;
+  return '';
+}
+function resolvedText(wb, sheetName, ws, r, c) {
+  const v = resolveCellValue(wb, sheetName, ws, r, c);
+  if (v === undefined || v === null) return '';
+  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth()+1)}-${pad(v.getDate())}`;
+  return String(v).trim();
+}
+function resolvedDateYMD(wb, sheetName, ws, r, c, sy, sm) {
+  const v = resolveCellValue(wb, sheetName, ws, r, c);
+  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth()+1)}-${pad(v.getDate())}`;
+  if (typeof v === 'number') {
+    const ds = excelSerialToYMD(v);
+    if (ds) return ds;
+  }
+  return dateFromDisplayText(v, sy) || dateToYMD(v) || parseCellDate(ws, r, c, sy, sm, true);
+}
+
 function excelSerialToYMD(n) {
   if (typeof n !== 'number' || !isFinite(n)) return '';
   const d = XLSX.SSF.parse_date_code(n);
@@ -448,15 +530,25 @@ function isWeekHeaderRow(ws, r) {
   const weekdayCnt = [2,3,4,5,6,7,8].filter(c => /^[일월화수목금토]$/.test(cellText(ws,r,c))).length;
   return /\d+\s*주차/.test(a) && weekdayCnt >= 5;
 }
-function buildWeekDateCols(ws, weekRow, dateRow, sy, sm) {
+function buildWeekDateCols(wb, sheetName, ws, weekRow, dateRow, sy, sm) {
+  // 핵심 수정:
+  // 날짜 행의 C열(일요일)을 기준으로 D~I는 +1일씩 직접 계산합니다.
+  // 수식 캐시가 틀어져 있거나 월 시트가 넘어가도 날짜/근무내용이 한 칸 밀리지 않습니다.
+  let startDate = resolvedDateYMD(wb, sheetName, ws, dateRow, 2, sy, sm);
+
+  // C열이 수식인 주차는 =이전주 I열+1 형태를 재귀 계산합니다.
+  if (!startDate) startDate = parseCellDate(ws, dateRow, 2, sy, sm, true);
+
+  if (startDate) {
+    const dates = [];
+    for (let i = 0; i < 7; i++) dates.push(addDaysYMD(startDate, i));
+    return dates.map((date, i) => ({col:i+2, date}));
+  }
+
+  // 날짜 행이 전혀 인식되지 않는 예외 파일만 주차 기준으로 보정합니다.
   const header = cellText(ws, weekRow, 0);
   const wm = header.match(/(\d+)\s*주차/);
   const weekNo = wm ? Number(wm[1]) : 0;
-
-  // 진설 스케줄 원본은 C~I가 항상 일~토이며,
-  // 1주차는 '해당 월 1일이 포함된 주'부터 시작합니다.
-  // 기존 버전의 -7일 보정 때문에 전체가 1주 앞당겨지는 문제가 있어 제거했습니다.
-  // 수식 캐시가 비거나 밀리면 날짜열이 한 칸씩 어긋나므로, 주차 기준으로 날짜를 직접 계산합니다.
   if (weekNo) {
     const first = new Date(sy, sm - 1, 1);
     const sundayOfFirstWeek = new Date(sy, sm - 1, 1 - first.getDay());
@@ -468,22 +560,12 @@ function buildWeekDateCols(ws, weekRow, dateRow, sy, sm) {
     }
     return computed.map((date, i) => ({col:i+2, date}));
   }
-
-  const dates = [];
-  for (let c=2; c<=8; c++) dates.push(parseCellDate(ws, dateRow, c, sy, sm, true));
-
-  for (let i=1; i<dates.length; i++) {
-    if (!dates[i] && dates[i-1]) dates[i] = addDaysYMD(dates[i-1], 1);
-  }
-  for (let i=dates.length-2; i>=0; i--) {
-    if (!dates[i] && dates[i+1]) dates[i] = addDaysYMD(dates[i+1], -1);
-  }
-
-  return dates.map((date, i) => ({col:i+2, date})).filter(x => !!x.date);
+  return [];
 }
 function parseWorkbook(wb) {
-  const rows = [];
-  const seen = new Set();
+  // worker|date 단위로만 저장하여 같은 날짜가 중복 생성되지 않게 합니다.
+  // 같은 날짜가 반복될 경우: 빈칸보다 근무내용이 있는 셀을 우선합니다.
+  const rowMap = new Map();
 
   wb.SheetNames.forEach(name => {
     const ws = wb.Sheets[name];
@@ -501,7 +583,7 @@ function parseWorkbook(wb) {
 
     weekStarts.forEach((weekRow, idx) => {
       const dateRow = weekRow + 1;
-      const currentDateCols = buildWeekDateCols(ws, weekRow, dateRow, sy, sm);
+      const currentDateCols = buildWeekDateCols(wb, name, ws, weekRow, dateRow, sy, sm);
       if (currentDateCols.length < 3) return;
       const nextWeek = idx + 1 < weekStarts.length ? weekStarts[idx+1] : range.e.r + 1;
       let currentGroup = '';
@@ -516,20 +598,21 @@ function parseWorkbook(wb) {
         currentDateCols.forEach(item => {
           const ds = item.date;
           const p = parseYMD(ds);
+
+          // 가장 중요: 해당 월 시트에서는 해당 월 날짜만 저장합니다.
+          // 예) 6월 시트 1주차의 5/24~5/30, 7월 시트 첫 주의 6월 말 날짜는 무시합니다.
           if (p.y !== sy || p.m !== sm) return;
 
-          const rawCell = cellObj(ws, r, item.col);
-          let work = rawCell ? (rawCell.w !== undefined ? String(rawCell.w).trim() : normalizeText(rawCell.v)) : '';
+          // 근무내용도 수식 참조(=이전시트!셀주소)를 따라가서 실제 값을 읽습니다.
+          // 날짜와 같은 열(item.col)에서만 읽어 한 칸 밀림을 방지합니다.
+          let work = resolvedText(wb, name, ws, r, item.col);
           work = String(work || '').replace(/\r\n/g, '\n').trim();
 
-          // 날짜/보조 숫자 또는 수식 잔여값이 근무내용으로 들어오는 경우 방지
           if (/^\d+$/.test(work) && Number(work) >= 1 && Number(work) <= 31) work = '';
           if (/^[일월화수목금토]$/.test(work)) work = '';
 
-          const key = `${ds}|${worker}|${work}`;
-          if (seen.has(key)) return;
-          seen.add(key);
-          rows.push({
+          const key = `${worker}|${ds}`;
+          const row = {
             year: sy,
             month: sm,
             date: ds,
@@ -538,16 +621,23 @@ function parseWorkbook(wb) {
             group: currentGroup,
             worker,
             work
-          });
+          };
+
+          if (!rowMap.has(key)) {
+            rowMap.set(key, row);
+          } else {
+            const old = rowMap.get(key);
+            if (!old.work && row.work) rowMap.set(key, row);
+          }
         });
       }
     });
   });
 
+  const rows = [...rowMap.values()];
   rows.sort((a,b) => a.date.localeCompare(b.date) || a.worker.localeCompare(b.worker,'ko'));
   return rows;
 }
-
 function refreshSelectors() {
   const years = [...new Set(scheduleData.map(r=>r.year))].sort((a,b)=>a-b);
   const yearSel = document.getElementById('yearSelect');
@@ -807,10 +897,10 @@ document.getElementById('fileInput').addEventListener('change', async e => {
   const fileNameEl=document.getElementById('fileName');
   if(fileNameEl) fileNameEl.textContent=file.name;
   const buf=await file.arrayBuffer();
-  const wb=XLSX.read(buf, {type:'array', cellDates:true});
+  const wb=XLSX.read(buf, {type:'array', cellDates:false, cellNF:true, cellText:true});
   scheduleData=parseWorkbook(wb);
   document.getElementById('status').textContent = scheduleData.length
-    ? `${file.name} 파일 기준으로 데이터를 불러왔습니다. 추출 건수: ${scheduleData.length.toLocaleString()}건`
+    ? `${file.name} 파일 기준으로 데이터를 불러왔습니다. 날짜는 엑셀 원본 시리얼값 기준으로 보정했습니다. 추출 건수: ${scheduleData.length.toLocaleString()}건`
     : `${file.name} 파일에서 인식 가능한 월별 스케줄 데이터를 찾지 못했습니다. 시트명이 '26년 1월' 형식인지 확인해 주세요.`;
   initMappingArea();
   refreshSelectors();
@@ -839,10 +929,10 @@ function toggleTheme(){
   const img = document.getElementById('jinsulLogo');
   if(!img) return;
   const candidates = [
-    'https://raw.githubusercontent.com/xginini-dot/jinsul/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png',
+    'https://raw.githubusercontent.com/jinsul-lab/openteam/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png',
     './%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png',
     './진설로고.png',
-    'https://raw.githubusercontent.com/jinsul-lab/openteam/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png'
+    'https://raw.githubusercontent.com/xginini-dot/jinsul/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png'
   ];
   let idx = 0;
   img.onerror = function(){
