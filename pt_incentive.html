@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="급여·비급여 매출에 따른 세후 인센티브 및 예상 총수령액 계산기" />
+  <title>인센티브 계산기 | JINSUL</title>
+
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: rgba(255,255,255,0.92);
+      --surface-strong: #ffffff;
+      --surface-soft: #eef3f9;
+      --text: #182230;
+      --muted: #667085;
+      --line: #dbe3ed;
+      --primary: #1f5eff;
+      --primary-soft: #e9efff;
+      --positive: #0f9f6e;
+      --positive-soft: #e6f8f1;
+      --warning: #d97706;
+      --shadow: 0 20px 50px rgba(28, 48, 78, 0.10);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0d1420;
+      --surface: rgba(20, 30, 45, 0.94);
+      --surface-strong: #172131;
+      --surface-soft: #202c3d;
+      --text: #f3f6fb;
+      --muted: #a7b2c2;
+      --line: #304057;
+      --primary: #7da2ff;
+      --primary-soft: #23345e;
+      --positive: #55d6a5;
+      --positive-soft: #173f35;
+      --warning: #ffb45d;
+      --shadow: 0 24px 60px rgba(0,0,0,0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(31,94,255,.11), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(15,159,110,.08), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background .25s ease, color .25s ease;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      width: min(1240px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-width: 0;
+    }
+
+    .brand img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      border-radius: 13px;
+      background: rgba(255,255,255,.84);
+      border: 1px solid var(--line);
+      padding: 5px;
+      box-shadow: 0 8px 24px rgba(31,94,255,.10);
+    }
+
+    .brand-text {
+      min-width: 0;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 19px;
+      letter-spacing: -.03em;
+    }
+
+    .brand-text span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 9px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 6px 18px rgba(0,0,0,.04);
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    .icon-btn:hover {
+      transform: translateY(-1px);
+      border-color: var(--primary);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(135deg, rgba(31,94,255,.13), rgba(15,159,110,.08)),
+        var(--surface);
+      box-shadow: var(--shadow);
+      margin-bottom: 22px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      right: -100px;
+      top: -130px;
+      border-radius: 50%;
+      background: rgba(31,94,255,.11);
+      filter: blur(2px);
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 46px);
+      line-height: 1.14;
+      letter-spacing: -.05em;
+    }
+
+    .hero p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .rule-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 22px;
+    }
+
+    .rule-chip {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.03fr) minmax(0, .97fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 24px 26px 0;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 21px;
+      letter-spacing: -.03em;
+    }
+
+    .card-subtitle {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .card-body {
+      padding: 22px 26px 26px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .field label small {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      height: 52px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      color: var(--text);
+      padding: 0 62px 0 15px;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(31,94,255,.12);
+    }
+
+    .input-wrap .unit {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+
+    .quick-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 9px;
+    }
+
+    .quick-btn {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-soft);
+      color: var(--text);
+      padding: 7px 9px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .btn {
+      min-height: 48px;
+      border: 0;
+      border-radius: 14px;
+      padding: 0 17px;
+      font-weight: 850;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 10px 26px rgba(31,94,255,.25);
+    }
+
+    .btn-secondary {
+      background: var(--surface-soft);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .result-main {
+      display: grid;
+      gap: 14px;
+    }
+
+    .total-panel {
+      padding: 24px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--primary), #5b7cff);
+      color: #fff;
+      box-shadow: 0 18px 36px rgba(31,94,255,.22);
+    }
+
+    .total-panel .label {
+      font-size: 14px;
+      font-weight: 750;
+      opacity: .88;
+    }
+
+    .total-panel .value {
+      margin-top: 8px;
+      font-size: clamp(32px, 5vw, 48px);
+      line-height: 1.1;
+      font-weight: 900;
+      letter-spacing: -.05em;
+      word-break: keep-all;
+    }
+
+    .total-panel .caption {
+      margin-top: 9px;
+      font-size: 13px;
+      opacity: .82;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: var(--surface-strong);
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .metric .value {
+      margin-top: 8px;
+      font-size: 21px;
+      font-weight: 900;
+      letter-spacing: -.03em;
+    }
+
+    .metric.positive {
+      background: var(--positive-soft);
+      border-color: rgba(15,159,110,.22);
+    }
+
+    .metric.positive .value {
+      color: var(--positive);
+    }
+
+    .formula {
+      margin-top: 16px;
+      padding: 15px 16px;
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.7;
+      background: var(--surface-soft);
+    }
+
+    .comparison-card {
+      margin-top: 22px;
+    }
+
+    .comparison-toolbar {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 840px;
+      border-collapse: collapse;
+      background: var(--surface-strong);
+    }
+
+    th,
+    td {
+      padding: 14px 13px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    th {
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-weight: 850;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+    }
+
+    tbody tr:hover {
+      background: var(--primary-soft);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .scenario-name {
+      width: 120px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      padding: 6px 7px;
+      font-weight: 800;
+    }
+
+    .scenario-name:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: var(--surface-strong);
+    }
+
+    .delete-btn {
+      border: 0;
+      background: transparent;
+      color: #e5484d;
+      font-weight: 900;
+      padding: 4px 6px;
+    }
+
+    .chart-section {
+      margin-top: 20px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface-strong);
+    }
+
+    .chart-title {
+      margin: 0 0 18px;
+      font-size: 15px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 13px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 110px minmax(160px, 1fr) 130px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .bar-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .bar-track {
+      height: 18px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--primary), #63a5ff);
+      transition: width .35s ease;
+    }
+
+    .bar-value {
+      text-align: right;
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .empty {
+      padding: 26px 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.7;
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        width: min(100% - 20px, 1240px);
+        padding-top: 14px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+      }
+
+      .brand-text span {
+        display: none;
+      }
+
+      .toolbar {
+        gap: 6px;
+      }
+
+      .icon-btn {
+        min-height: 40px;
+        padding: 0 10px;
+        font-size: 12px;
+      }
+
+      .hero,
+      .card-header,
+      .card-body {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .hero {
+        padding-top: 25px;
+        padding-bottom: 25px;
+      }
+
+      .form-grid,
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .bar-row {
+        grid-template-columns: 85px minmax(120px, 1fr);
+      }
+
+      .bar-value {
+        grid-column: 2;
+        margin-top: -7px;
+        text-align: left;
+        color: var(--muted);
+      }
+    }
+
+    @media print {
+      .toolbar,
+      .action-row,
+      .comparison-toolbar,
+      .delete-btn,
+      .quick-buttons {
+        display: none !important;
+      }
+
+      body {
+        background: #fff;
+      }
+
+      .app {
+        width: 100%;
+        padding: 0;
+      }
+
+      .card,
+      .hero {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <img
+          src="https://raw.githubusercontent.com/jinsul-lab/openteam/main/%EC%A7%84%EC%84%A4%EB%A1%9C%EA%B3%A0.png"
+          alt="진설 로고"
+          onerror="this.style.display='none'"
+        />
+        <div class="brand-text">
+          <strong>JINSUL 인센티브 계산기</strong>
+          <span>매출별 세후 인센티브와 총수령액 비교</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="icon-btn" type="button" onclick="goBack()">← 뒤로가기</button>
+        <button class="icon-btn" type="button" id="themeToggle" onclick="toggleTheme()">🌙 다크</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">💰 INCENTIVE CALCULATOR</div>
+        <h1>급여·비급여 매출을 입력하면<br />예상 세후 수령액을 바로 계산합니다.</h1>
+        <p>
+          기본급은 세후 350만원, 비급여 매출 인센티브는 세후 1%,
+          급여 매출 인센티브는 세후 2%를 기본값으로 적용했습니다.
+        </p>
+
+        <div class="rule-chips">
+          <span class="rule-chip">기본급 세후 350만원</span>
+          <span class="rule-chip">비급여 매출 × 1%</span>
+          <span class="rule-chip">급여 매출 × 2%</span>
+          <span class="rule-chip">시나리오별 비교 저장</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">매출 입력</h2>
+            <p class="card-subtitle">금액은 원 단위로 입력하며, 쉼표는 자동으로 표시됩니다.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="scenarioName">
+                비교명
+                <small>예: 7월 예상</small>
+              </label>
+              <div class="input-wrap">
+                <input id="scenarioName" type="text" value="현재 계산" maxlength="30" style="padding-right:15px" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="baseSalary">
+                세후 기본급
+                <small>기본 350만원</small>
+              </label>
+              <div class="input-wrap">
+                <input id="baseSalary" class="money-input" type="text" inputmode="numeric" value="3,500,000" />
+                <span class="unit">원</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="nonCoveredRate">
+                비급여 인센티브율
+                <small>기본 1%</small>
+              </label>
+              <div class="input-wrap">
+                <input id="nonCoveredRate" type="number" min="0" step="0.1" value="1" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="coveredRate">
+                급여 인센티브율
+                <small>기본 2%</small>
+              </label>
+              <div class="input-wrap">
+                <input id="coveredRate" type="number" min="0" step="0.1" value="2" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="nonCoveredSales">
+                비급여 매출
+                <small>세후 1% 적용</small>
+              </label>
+              <div class="input-wrap">
+                <input id="nonCoveredSales" class="money-input" type="text" inputmode="numeric" value="30,000,000" />
+                <span class="unit">원</span>
+              </div>
+              <div class="quick-buttons">
+                <button class="quick-btn" type="button" onclick="addAmount('nonCoveredSales', 5000000)">+500만</button>
+                <button class="quick-btn" type="button" onclick="addAmount('nonCoveredSales', 10000000)">+1,000만</button>
+                <button class="quick-btn" type="button" onclick="addAmount('nonCoveredSales', 30000000)">+3,000만</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="coveredSales">
+                급여 매출
+                <small>세후 2% 적용</small>
+              </label>
+              <div class="input-wrap">
+                <input id="coveredSales" class="money-input" type="text" inputmode="numeric" value="30,000,000" />
+                <span class="unit">원</span>
+              </div>
+              <div class="quick-buttons">
+                <button class="quick-btn" type="button" onclick="addAmount('coveredSales', 5000000)">+500만</button>
+                <button class="quick-btn" type="button" onclick="addAmount('coveredSales', 10000000)">+1,000만</button>
+                <button class="quick-btn" type="button" onclick="addAmount('coveredSales', 30000000)">+3,000만</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="btn btn-primary" type="button" onclick="addScenario()">비교 데이터에 추가</button>
+            <button class="btn btn-secondary" type="button" onclick="resetCalculator()">초기화</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">계산 결과</h2>
+            <p class="card-subtitle">입력값이 변경되면 결과가 자동으로 갱신됩니다.</p>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="result-main">
+            <div class="total-panel">
+              <div class="label">예상 세후 총수령액</div>
+              <div class="value" id="totalPay">0원</div>
+              <div class="caption">세후 기본급 + 비급여 인센티브 + 급여 인센티브</div>
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric">
+                <div class="label">세후 기본급</div>
+                <div class="value" id="baseSalaryResult">0원</div>
+              </div>
+
+              <div class="metric positive">
+                <div class="label">총 인센티브</div>
+                <div class="value" id="totalIncentive">0원</div>
+              </div>
+
+              <div class="metric">
+                <div class="label">비급여 인센티브</div>
+                <div class="value" id="nonCoveredIncentive">0원</div>
+              </div>
+
+              <div class="metric">
+                <div class="label">급여 인센티브</div>
+                <div class="value" id="coveredIncentive">0원</div>
+              </div>
+            </div>
+
+            <div class="formula" id="formulaText">
+              계산식을 불러오는 중입니다.
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card comparison-card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">매출별 비교 데이터</h2>
+          <p class="card-subtitle">현재 계산값을 여러 개 저장해 매출 조합별 총수령액을 비교할 수 있습니다.</p>
+        </div>
+
+        <div class="comparison-toolbar">
+          <button class="icon-btn" type="button" onclick="addPresetScenarios()">예시 구간 추가</button>
+          <button class="icon-btn" type="button" onclick="exportCSV()">CSV 다운로드</button>
+          <button class="icon-btn" type="button" onclick="clearScenarios()">전체 삭제</button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>비교명</th>
+                <th>비급여 매출</th>
+                <th>급여 매출</th>
+                <th>비급여 인센티브</th>
+                <th>급여 인센티브</th>
+                <th>총 인센티브</th>
+                <th>세후 총수령액</th>
+                <th>삭제</th>
+              </tr>
+            </thead>
+            <tbody id="scenarioTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="chart-section">
+          <h3 class="chart-title">세후 총수령액 비교</h3>
+          <div class="bars" id="scenarioBars"></div>
+        </div>
+
+        <div class="footer-note">
+          본 계산기는 입력한 매출에 설정된 비율을 단순 적용한 예상값입니다.
+          실제 지급액은 병원 내부 인센티브 기준, 매출 인정 범위, 공제 조건 및 정산 방식에 따라 달라질 수 있습니다.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const els = {
+      scenarioName: document.getElementById('scenarioName'),
+      baseSalary: document.getElementById('baseSalary'),
+      nonCoveredRate: document.getElementById('nonCoveredRate'),
+      coveredRate: document.getElementById('coveredRate'),
+      nonCoveredSales: document.getElementById('nonCoveredSales'),
+      coveredSales: document.getElementById('coveredSales'),
+      totalPay: document.getElementById('totalPay'),
+      baseSalaryResult: document.getElementById('baseSalaryResult'),
+      totalIncentive: document.getElementById('totalIncentive'),
+      nonCoveredIncentive: document.getElementById('nonCoveredIncentive'),
+      coveredIncentive: document.getElementById('coveredIncentive'),
+      formulaText: document.getElementById('formulaText'),
+      scenarioTableBody: document.getElementById('scenarioTableBody'),
+      scenarioBars: document.getElementById('scenarioBars'),
+      themeToggle: document.getElementById('themeToggle')
+    };
+
+    let scenarios = loadScenarios();
+
+    function parseMoney(value) {
+      return Math.max(0, Number(String(value).replace(/[^\d.-]/g, '')) || 0);
+    }
+
+    function formatNumber(value) {
+      return Math.round(value).toLocaleString('ko-KR');
+    }
+
+    function formatWon(value) {
+      return `${formatNumber(value)}원`;
+    }
+
+    function formatInput(input) {
+      const value = parseMoney(input.value);
+      input.value = value ? formatNumber(value) : '';
+    }
+
+    function calculate() {
+      const baseSalary = parseMoney(els.baseSalary.value);
+      const nonCoveredSales = parseMoney(els.nonCoveredSales.value);
+      const coveredSales = parseMoney(els.coveredSales.value);
+      const nonCoveredRate = Math.max(0, Number(els.nonCoveredRate.value) || 0);
+      const coveredRate = Math.max(0, Number(els.coveredRate.value) || 0);
+
+      const nonCoveredIncentive = Math.round(nonCoveredSales * nonCoveredRate / 100);
+      const coveredIncentive = Math.round(coveredSales * coveredRate / 100);
+      const totalIncentive = nonCoveredIncentive + coveredIncentive;
+      const totalPay = baseSalary + totalIncentive;
+
+      els.baseSalaryResult.textContent = formatWon(baseSalary);
+      els.nonCoveredIncentive.textContent = formatWon(nonCoveredIncentive);
+      els.coveredIncentive.textContent = formatWon(coveredIncentive);
+      els.totalIncentive.textContent = formatWon(totalIncentive);
+      els.totalPay.textContent = formatWon(totalPay);
+
+      els.formulaText.innerHTML =
+        `<strong>계산식</strong><br>` +
+        `${formatWon(baseSalary)} + ` +
+        `(${formatWon(nonCoveredSales)} × ${nonCoveredRate}%) + ` +
+        `(${formatWon(coveredSales)} × ${coveredRate}%) = ` +
+        `<strong>${formatWon(totalPay)}</strong>`;
+
+      return {
+        name: els.scenarioName.value.trim() || `비교 ${scenarios.length + 1}`,
+        baseSalary,
+        nonCoveredSales,
+        coveredSales,
+        nonCoveredRate,
+        coveredRate,
+        nonCoveredIncentive,
+        coveredIncentive,
+        totalIncentive,
+        totalPay
+      };
+    }
+
+    function addAmount(inputId, amount) {
+      const input = document.getElementById(inputId);
+      input.value = formatNumber(parseMoney(input.value) + amount);
+      calculate();
+    }
+
+    function addScenario() {
+      const data = calculate();
+      scenarios.push({
+        id: Date.now() + Math.random(),
+        ...data
+      });
+      saveScenarios();
+      renderScenarios();
+      els.scenarioName.value = `비교 ${scenarios.length + 1}`;
+    }
+
+    function addPresetScenarios() {
+      const baseSalary = parseMoney(els.baseSalary.value);
+      const nonCoveredRate = Math.max(0, Number(els.nonCoveredRate.value) || 0);
+      const coveredRate = Math.max(0, Number(els.coveredRate.value) || 0);
+
+      const presets = [
+        { name: '매출 4천만원', nonCoveredSales: 20000000, coveredSales: 20000000 },
+        { name: '매출 6천만원', nonCoveredSales: 30000000, coveredSales: 30000000 },
+        { name: '매출 8천만원', nonCoveredSales: 40000000, coveredSales: 40000000 },
+        { name: '매출 1억원', nonCoveredSales: 50000000, coveredSales: 50000000 }
+      ];
+
+      presets.forEach((preset, index) => {
+        const nonCoveredIncentive = Math.round(preset.nonCoveredSales * nonCoveredRate / 100);
+        const coveredIncentive = Math.round(preset.coveredSales * coveredRate / 100);
+        const totalIncentive = nonCoveredIncentive + coveredIncentive;
+
+        scenarios.push({
+          id: Date.now() + index + Math.random(),
+          name: preset.name,
+          baseSalary,
+          nonCoveredSales: preset.nonCoveredSales,
+          coveredSales: preset.coveredSales,
+          nonCoveredRate,
+          coveredRate,
+          nonCoveredIncentive,
+          coveredIncentive,
+          totalIncentive,
+          totalPay: baseSalary + totalIncentive
+        });
+      });
+
+      saveScenarios();
+      renderScenarios();
+    }
+
+    function deleteScenario(id) {
+      scenarios = scenarios.filter(item => item.id !== id);
+      saveScenarios();
+      renderScenarios();
+    }
+
+    function clearScenarios() {
+      if (!scenarios.length) return;
+      if (confirm('저장된 비교 데이터를 모두 삭제하시겠습니까?')) {
+        scenarios = [];
+        saveScenarios();
+        renderScenarios();
+      }
+    }
+
+    function updateScenarioName(id, value) {
+      const target = scenarios.find(item => item.id === id);
+      if (!target) return;
+      target.name = value.trim() || '이름 없음';
+      saveScenarios();
+      renderBars();
+    }
+
+    function renderScenarios() {
+      if (!scenarios.length) {
+        els.scenarioTableBody.innerHTML = `
+          <tr>
+            <td colspan="8">
+              <div class="empty">아직 저장된 비교 데이터가 없습니다.</div>
+            </td>
+          </tr>
+        `;
+      } else {
+        els.scenarioTableBody.innerHTML = scenarios.map(item => `
+          <tr>
+            <td>
+              <input
+                class="scenario-name"
+                value="${escapeHtml(item.name)}"
+                onchange="updateScenarioName(${item.id}, this.value)"
+                aria-label="비교명 수정"
+              />
+            </td>
+            <td>${formatWon(item.nonCoveredSales)}</td>
+            <td>${formatWon(item.coveredSales)}</td>
+            <td>${formatWon(item.nonCoveredIncentive)}</td>
+            <td>${formatWon(item.coveredIncentive)}</td>
+            <td><strong>${formatWon(item.totalIncentive)}</strong></td>
+            <td><strong>${formatWon(item.totalPay)}</strong></td>
+            <td><button class="delete-btn" type="button" onclick="deleteScenario(${item.id})">삭제</button></td>
+          </tr>
+        `).join('');
+      }
+
+      renderBars();
+    }
+
+    function renderBars() {
+      if (!scenarios.length) {
+        els.scenarioBars.innerHTML = '<div class="empty">비교 데이터를 추가하면 막대그래프가 표시됩니다.</div>';
+        return;
+      }
+
+      const maxValue = Math.max(...scenarios.map(item => item.totalPay), 1);
+
+      els.scenarioBars.innerHTML = scenarios.map(item => {
+        const width = Math.max(3, (item.totalPay / maxValue) * 100);
+        return `
+          <div class="bar-row">
+            <div class="bar-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${width}%"></div>
+            </div>
+            <div class="bar-value">${formatWon(item.totalPay)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function resetCalculator() {
+      els.scenarioName.value = '현재 계산';
+      els.baseSalary.value = '3,500,000';
+      els.nonCoveredRate.value = '1';
+      els.coveredRate.value = '2';
+      els.nonCoveredSales.value = '30,000,000';
+      els.coveredSales.value = '30,000,000';
+      calculate();
+    }
+
+    function exportCSV() {
+      if (!scenarios.length) {
+        alert('다운로드할 비교 데이터가 없습니다.');
+        return;
+      }
+
+      const headers = [
+        '비교명',
+        '세후 기본급',
+        '비급여 매출',
+        '급여 매출',
+        '비급여 인센티브율',
+        '급여 인센티브율',
+        '비급여 인센티브',
+        '급여 인센티브',
+        '총 인센티브',
+        '세후 총수령액'
+      ];
+
+      const rows = scenarios.map(item => [
+        item.name,
+        item.baseSalary,
+        item.nonCoveredSales,
+        item.coveredSales,
+        item.nonCoveredRate,
+        item.coveredRate,
+        item.nonCoveredIncentive,
+        item.coveredIncentive,
+        item.totalIncentive,
+        item.totalPay
+      ]);
+
+      const csv = '\uFEFF' + [headers, ...rows]
+        .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `인센티브_비교_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function saveScenarios() {
+      localStorage.setItem('jinsulIncentiveScenarios', JSON.stringify(scenarios));
+    }
+
+    function loadScenarios() {
+      try {
+        return JSON.parse(localStorage.getItem('jinsulIncentiveScenarios')) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function goBack() {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = 'https://xginini-dot.github.io/jinsul/';
+      }
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('jinsulIncentiveTheme', theme);
+      els.themeToggle.textContent = theme === 'dark' ? '☀️ 라이트' : '🌙 다크';
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    }
+
+    document.querySelectorAll('.money-input').forEach(input => {
+      input.addEventListener('input', () => {
+        const cursorAtEnd = input.selectionStart === input.value.length;
+        formatInput(input);
+        if (cursorAtEnd) {
+          input.setSelectionRange(input.value.length, input.value.length);
+        }
+        calculate();
+      });
+
+      input.addEventListener('blur', () => {
+        formatInput(input);
+        calculate();
+      });
+    });
+
+    [els.nonCoveredRate, els.coveredRate, els.scenarioName].forEach(input => {
+      input.addEventListener('input', calculate);
+    });
+
+    const savedTheme = localStorage.getItem('jinsulIncentiveTheme');
+    const preferredTheme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(preferredTheme);
+    calculate();
+    renderScenarios();
+  </script>
+</body>
+</html>
