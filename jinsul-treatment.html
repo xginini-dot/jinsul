@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="ko">
     <head>
@@ -1694,8 +1695,8 @@ body.theme-light .metric{
                     <span>주사만, 주사+도수 등 환자 리스트를 검토합니다.</span>
                 </div>
                 <div class="note-card">
-                    <b>④ 중복 정리</b>
-                    <span>동일 환자·동일 날짜는 1건으로 정리합니다.</span>
+                    <b>④ 주사 횟수 비교</b>
+                    <span>주사만 환자와 주사+충격파 환자의 주사 횟수를 비교합니다.</span>
                 </div>
             </div>
             <div class="grid">
@@ -1777,6 +1778,7 @@ body.theme-light .metric{
                 <button class="tab active" data-tab="dateTab">① 내원일 기준 조합</button>
                 <button class="tab" data-tab="patientTab">② 환자 기준 누적 조합</button>
                 <button class="tab" data-tab="monthTab">③ 월별 요약</button>
+                <button class="tab" data-tab="injectionCompareTab">④ 주사 횟수 비교</button>
             </div>
             <div id="dateTab" class="panel tabpane">
                 <div class="section-title">
@@ -1817,6 +1819,24 @@ body.theme-light .metric{
                 </div>
                 <div class="month-grid" id="monthSummary"></div>
             </div>
+            <div id="injectionCompareTab" class="panel tabpane hidden">
+                <div class="section-title">
+                    <h2>주사치료 횟수 비교</h2>
+                    <small>환자 기준 누적 조합이 정확히 ‘주사치료’인 환자와 ‘주사치료 + 체외충격파’인 환자의 주사 시행일수를 비교합니다.</small>
+                </div>
+                <div class="summary" id="injectionCompareSummary"></div>
+                <div class="notice">동일 환자·동일 날짜의 주사 내역은 1회로 계산합니다. 도수치료까지 포함된 환자는 두 비교군에서 제외합니다.</div>
+                <div class="split" style="margin-top:18px">
+                    <div id="injectionCompareTable"></div>
+                    <div>
+                        <div class="searchrow">
+                            <input id="injectionCompareSearch" placeholder="리스트 검색: 구분, 차트번호, 환자명, 주민번호">
+                            <button class="btn ghost" id="injectionCompareCsv">CSV</button>
+                        </div>
+                        <div class="listbox" id="injectionCompareList"></div>
+                    </div>
+                </div>
+            </div>
             <div class="footer">※ 엑셀 첫 줄에 제목이 있어도 자동으로 ‘차트번호, 수진자명, 주민등록번호, 내원일’이 있는 행을 찾아 분석합니다.</div>
         </div>
         <script>
@@ -1831,6 +1851,7 @@ body.theme-light .metric{
                 selectedPatientCombo: null,
                 lastDateList: [],
                 lastPatientList: [],
+                lastInjectionCompareList: [],
                 formats: {
                     total: new Set(),
                     inj: new Set(),
@@ -2210,13 +2231,19 @@ body.theme-light .metric{
                             dates: [],
                             inj: false,
                             manual: false,
-                            shock: false
+                            shock: false,
+                            injectionDates: [],
+                            shockDates: [],
+                            manualDates: []
                         });
                     const p = pmap.get(x.pkey);
                     p.dates.push(x.date);
                     p.inj = p.inj || x.inj;
                     p.manual = p.manual || x.manual;
                     p.shock = p.shock || x.shock;
+                    if (x.inj) p.injectionDates.push(x.date);
+                    if (x.shock) p.shockDates.push(x.date);
+                    if (x.manual) p.manualDates.push(x.date);
                 }
                 );
                 state.patientRows = [...pmap.values()].map(p => ({
@@ -2224,6 +2251,9 @@ body.theme-light .metric{
                     firstDate: p.dates.slice().sort()[0],
                     lastDate: p.dates.slice().sort().at(-1),
                     visitDays: [...new Set(p.dates)].length,
+                    injectionCount: [...new Set(p.injectionDates)].length,
+                    shockCount: [...new Set(p.shockDates)].length,
+                    manualCount: [...new Set(p.manualDates)].length,
                     combo: comboName(p)
                 }));
                 renderAll();
@@ -2282,6 +2312,67 @@ body.theme-light .metric{
                 }
                 ).join('') || '<div class="hint">월별 데이터가 없습니다.</div>';
             }
+            function average(arr) {
+                return arr.length ? arr.reduce((sum, n) => sum + n, 0) / arr.length : 0;
+            }
+            function median(arr) {
+                if (!arr.length) return 0;
+                const a = [...arr].sort((x, y) => x - y);
+                const mid = Math.floor(a.length / 2);
+                return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+            }
+            function injectionCompareGroups() {
+                return [
+                    {
+                        key: 'injOnly',
+                        label: '주사치료만',
+                        rows: state.patientRows.filter(p => p.combo === '주사치료')
+                    },
+                    {
+                        key: 'injShock',
+                        label: '주사치료 + 체외충격파',
+                        rows: state.patientRows.filter(p => p.combo === '주사치료 + 체외충격파')
+                    }
+                ];
+            }
+            function renderInjectionCompare() {
+                const groups = injectionCompareGroups();
+                const stats = groups.map(g => {
+                    const counts = g.rows.map(r => r.injectionCount || 0);
+                    return {
+                        ...g,
+                        patientCount: g.rows.length,
+                        totalInjection: counts.reduce((a, b) => a + b, 0),
+                        avgInjection: average(counts),
+                        medianInjection: median(counts),
+                        maxInjection: counts.length ? Math.max(...counts) : 0
+                    };
+                });
+                const a = stats[0], b = stats[1];
+                const diff = b.avgInjection - a.avgInjection;
+                injectionCompareSummary.innerHTML = `
+                    <div class="metric"><span>주사만 환자</span><b>${a.patientCount.toLocaleString()}명</b></div>
+                    <div class="metric"><span>주사만 평균 주사횟수</span><b>${a.avgInjection.toFixed(2)}회</b></div>
+                    <div class="metric"><span>주사+충격파 환자</span><b>${b.patientCount.toLocaleString()}명</b></div>
+                    <div class="metric"><span>주사+충격파 평균 주사횟수</span><b>${b.avgInjection.toFixed(2)}회</b></div>
+                    <div class="metric"><span>평균 차이</span><b>${diff >= 0 ? '+' : ''}${diff.toFixed(2)}회</b></div>`;
+
+                const maxAvg = Math.max(...stats.map(x => x.avgInjection), 1);
+                injectionCompareTable.innerHTML = `<table><thead><tr><th>비교군</th><th class="right">환자수</th><th class="right">총 주사횟수</th><th class="right">평균</th><th class="right">중앙값</th><th class="right">최대</th><th>평균 비교</th></tr></thead><tbody>${stats.map(x => `<tr class="clickable" onclick="selectInjectionCompareGroup('${x.key}')"><td><span class="badge">${x.label}</span></td><td class="right"><b>${x.patientCount.toLocaleString()}</b></td><td class="right">${x.totalInjection.toLocaleString()}</td><td class="right"><b>${x.avgInjection.toFixed(2)}회</b></td><td class="right">${x.medianInjection.toFixed(1)}회</td><td class="right">${x.maxInjection.toLocaleString()}회</td><td><div class="bar"><i style="width:${(x.avgInjection / maxAvg * 100).toFixed(1)}%"></i></div></td></tr>`).join('')}</tbody></table>`;
+                renderInjectionCompareList(groups.flatMap(g => g.rows.map(r => ({...r, compareGroup: g.label}))));
+            }
+            function renderInjectionCompareList(rows) {
+                const q = (injectionCompareSearch.value || '').toLowerCase();
+                const arr = rows.filter(r => [r.compareGroup, r.chart, r.name, r.rrn, r.firstDate, r.lastDate].join(' ').toLowerCase().includes(q));
+                arr.sort((a, b) => (b.injectionCount || 0) - (a.injectionCount || 0) || String(a.name).localeCompare(String(b.name), 'ko'));
+                state.lastInjectionCompareList = arr;
+                injectionCompareList.innerHTML = arr.length ? `<table><thead><tr><th>비교군</th><th>차트번호</th><th>수진자명</th><th>주민등록번호</th><th class="right">주사횟수</th><th class="right">충격파횟수</th><th>기간</th></tr></thead><tbody>${arr.map(r => `<tr><td>${r.compareGroup}</td><td>${r.chart}</td><td>${r.name}</td><td>${r.rrn}</td><td class="right"><b>${r.injectionCount}</b></td><td class="right">${r.shockCount}</td><td>${r.firstDate} ~ ${r.lastDate}</td></tr>`).join('')}</tbody></table>` : `<div class="hint">해당 비교군 환자가 없습니다.</div>`;
+            }
+            function selectInjectionCompareGroup(key) {
+                const group = injectionCompareGroups().find(g => g.key === key);
+                renderInjectionCompareList((group?.rows || []).map(r => ({...r, compareGroup: group.label})));
+            }
+            window.selectInjectionCompareGroup = selectInjectionCompareGroup;
             function renderAll() {
                 renderSummary();
                 comboTable(state.dateRows, 'dateComboTable', 'date');
@@ -2289,6 +2380,7 @@ body.theme-light .metric{
                 selectCombo('date', state.selectedDateCombo || '주사치료');
                 selectCombo('patient', state.selectedPatientCombo || '주사치료');
                 renderMonths();
+                renderInjectionCompare();
             }
             function downloadCsv(rows, filename) {
                 if (!rows.length) {
@@ -2319,6 +2411,8 @@ body.theme-light .metric{
             sortMode.onchange = () => renderAll();
             dateCsv.onclick = () => downloadCsv(state.lastDateList, '내원일기준_치료조합리스트.csv');
             patientCsv.onclick = () => downloadCsv(state.lastPatientList, '환자기준_치료조합리스트.csv');
+            injectionCompareSearch.oninput = () => renderInjectionCompare();
+            injectionCompareCsv.onclick = () => downloadCsv(state.lastInjectionCompareList, '주사횟수_비교_환자리스트.csv');
             document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
                 document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
                 b.classList.add('active');
